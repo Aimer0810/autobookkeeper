@@ -49,6 +49,15 @@ docker build -t autobookkeeper .
 docker run -p 8080:8080 --env-file .env autobookkeeper
 ```
 
+如果你的本地 Docker 网络无法稳定访问 Maven Central，可以先在宿主机打包，再用 `Dockerfile.runtime` 验证运行镜像：
+
+```powershell
+mvn package
+docker build -f Dockerfile.runtime -t autobookkeeper:runtime-local .
+docker run -p 18080:8080 -e SPRING_PROFILES_ACTIVE=local autobookkeeper:runtime-local
+Invoke-RestMethod http://localhost:18080/api/health
+```
+
 ## Render Blueprint
 
 项目包含 `render.yaml`，可在 Render 中创建 Web Service 和 PostgreSQL 数据库。创建后请在 Render 控制台手动设置：
