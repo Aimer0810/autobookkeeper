@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: autobookkeeper
+    env: docker
+    plan: free
+    autoDeploy: false
+    envVars:
+      - key: SPRING_PROFILES_ACTIVE
+        value: cloud
+      - key: AUTOBOOKKEEPER_API_TOKEN
+        sync: false
+      - key: VISION_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        fromDatabase:
+          name: autobookkeeper-db
+          property: connectionString
+      - key: DATABASE_USERNAME
+        fromDatabase:
+          name: autobookkeeper-db
+          property: user
+      - key: DATABASE_PASSWORD
+        fromDatabase:
+          name: autobookkeeper-db
+          property: password
+
+databases:
+  - name: autobookkeeper-db
+    plan: free

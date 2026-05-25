@@ -1,0 +1,77 @@
+spring:
+  application:
+    name: autobookkeeper
+  profiles:
+    active: local
+  servlet:
+    multipart:
+      max-file-size: 8MB
+      max-request-size: 10MB
+  datasource:
+    url: jdbc:h2:file:./data/autobookkeeper;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false
+
+server:
+  port: 8080
+
+logging:
+  level:
+    com.autobookkeeper: INFO
+
+autobookkeeper:
+  api-token: ${AUTOBOOKKEEPER_API_TOKEN:}
+  ai:
+    provider: ${AUTOBOOKKEEPER_AI_PROVIDER:cloud}
+    api-key: ${VISION_API_KEY:{{API_KEY}}}
+    timeout-ms: ${AUTOBOOKKEEPER_AI_TIMEOUT_MS:2500}
+  privacy:
+    persist-original-image: false
+    redact-logs: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: cloud
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME:}
+    password: ${DATABASE_PASSWORD:}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+logging:
+  level:
+    com.autobookkeeper: INFO
+
+autobookkeeper:
+  privacy:
+    persist-original-image: false
+    redact-logs: true
+
+---
+spring:
+  config:
+    activate:
+      on-profile: home
+  datasource:
+    url: ${DATABASE_URL:jdbc:h2:file:./data/autobookkeeper-home;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE}
+    username: ${DATABASE_USERNAME:sa}
+    password: ${DATABASE_PASSWORD:}
+    driver-class-name: ${DATABASE_DRIVER:org.h2.Driver}
+
+autobookkeeper:
+  privacy:
+    persist-original-image: false
+    redact-logs: true
