@@ -44,6 +44,8 @@ public class ApiTokenFilter extends OncePerRequestFilter {
     }
 
     private boolean requiresToken(HttpServletRequest request) {
-        return "POST".equalsIgnoreCase(request.getMethod()) && "/api/process".equals(request.getRequestURI());
+        String path = request.getRequestURI();
+        return ("POST".equalsIgnoreCase(request.getMethod()) && "/api/process".equals(path))
+                || path.startsWith("/api/transactions");
     }
 }

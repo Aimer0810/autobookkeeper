@@ -69,6 +69,12 @@ $body = @{ imageBase64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetByte
 Invoke-RestMethod https://your-domain.example/api/process -Method Post -ContentType 'application/json' -Headers @{ 'X-API-Token' = 'your-token' } -Body $body
 ```
 
+账目查询接口同样需要 Token：
+
+```powershell
+Invoke-RestMethod 'https://your-domain.example/api/transactions?page=0&size=20' -Headers @{ 'X-API-Token' = 'your-token' }
+```
+
 ## 隐私默认值
 
 - 不硬编码真实 AI Key。

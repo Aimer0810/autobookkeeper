@@ -10,6 +10,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import java.util.Base64;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -53,5 +54,18 @@ class ProcessControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.transactionId").exists())
                 .andExpect(jsonPath("$.needsReview").value(true));
+    }
+
+    @Test
+    void rejectsTransactionListWithoutApiTokenWhenConfigured() throws Exception {
+        mockMvc.perform(get("/api/transactions"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void allowsTransactionListWithApiTokenWhenConfigured() throws Exception {
+        mockMvc.perform(get("/api/transactions")
+                        .header("X-API-Token", "test-token"))
+                .andExpect(status().isOk());
     }
 }
