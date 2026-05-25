@@ -2,10 +2,16 @@ package com.autobookkeeper.ai;
 
 import com.autobookkeeper.config.AutoBookkeeperProperties;
 import com.autobookkeeper.domain.Bill;
+import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
 
+import java.io.IOException;
 import java.math.BigDecimal;
+import java.net.InetSocketAddress;
+import java.net.URI;
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -27,5 +33,40 @@ class CloudVisionServiceImplTest {
         assertThat(bill.category()).isEqualTo("餐饮");
         assertThat(bill.confidence()).isEqualTo(0.92);
         assertThat(bill.needsReview()).isFalse();
+    }
+
+    @Test
+    void sendsImageToVisionApiAndParsesReturnedBillJson() throws IOException {
+        AtomicReference<String> requestBody = new AtomicReference<>("");
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/v1/chat/completions", exchange -> {
+            requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            byte[] response = """
+                    {"choices":[{"message":{"content":"{\\"date\\":\\"2026-05-25\\",\\"amount\\":\\"12.80\\",\\"merchant\\":\\"麦当劳\\",\\"category\\":\\"餐饮\\",\\"confidence\\":0.91,\\"rawText\\":\\"麦当劳 12.80\\"}"}}]}
+                    """.getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, response.length);
+            exchange.getResponseBody().write(response);
+            exchange.close();
+        });
+        server.start();
+        try {
+            URI endpoint = URI.create("http://localhost:" + server.getAddress().getPort() + "/v1/chat/completions");
+            CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
+                    "",
+                    new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500),
+                    new AutoBookkeeperProperties.Privacy(false, true)
+            ), endpoint);
+
+            Bill bill = service.extractBillFromImage("image-bytes".getBytes());
+
+            assertThat(requestBody.get()).contains("data:image/png;base64");
+            assertThat(requestBody.get()).contains("请从这张支付截图中提取账单信息");
+            assertThat(bill.amount()).isEqualByComparingTo(new BigDecimal("12.80"));
+            assertThat(bill.merchant()).isEqualTo("麦当劳");
+            assertThat(bill.category()).isEqualTo("餐饮");
+            assertThat(bill.needsReview()).isFalse();
+        } finally {
+            server.stop(0);
+        }
     }
 }
