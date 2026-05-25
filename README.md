@@ -58,6 +58,10 @@ AUTOBOOKKEEPER_API_TOKEN
 VISION_API_KEY
 ```
 
+Render 的 PostgreSQL `connectionString` 默认是 `postgresql://...`。项目的 Docker 入口脚本会自动转换为 Spring Boot 需要的 `jdbc:postgresql://...`。
+
+Render 会为 Web Service 注入 `PORT` 环境变量，应用会通过 `server.port=${PORT:8080}` 自动监听 Render 指定端口；本地开发仍默认使用 `8080`。`render.yaml` 已配置 `healthCheckPath: /api/health`。
+
 ## API 示例
 
 ```powershell
