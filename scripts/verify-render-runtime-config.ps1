@@ -11,4 +11,12 @@ if ($render -notmatch 'healthCheckPath:\s*/api/health') {
     throw 'render.yaml must define healthCheckPath: /api/health.'
 }
 
+if ($render -notmatch 'VISION_API_ENDPOINT') {
+    throw 'render.yaml must define VISION_API_ENDPOINT.'
+}
+
+if ($render -notmatch 'AUTOBOOKKEEPER_API_TOKEN') {
+    throw 'render.yaml must define AUTOBOOKKEEPER_API_TOKEN.'
+}
+
 Write-Output 'Render runtime config check passed.'

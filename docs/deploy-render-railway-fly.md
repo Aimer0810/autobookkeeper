@@ -18,6 +18,7 @@ java -jar target/autobookkeeper-0.1.0.jar --spring.profiles.active=cloud
 SPRING_PROFILES_ACTIVE=cloud
 AUTOBOOKKEEPER_API_TOKEN=<long-random-token>
 VISION_API_KEY={{API_KEY}}
+VISION_API_ENDPOINT=https://api.openai.com/v1/chat/completions
 DATABASE_URL=jdbc:postgresql://<host>:<port>/<database>
 DATABASE_USERNAME=<username>
 DATABASE_PASSWORD=<password>
@@ -28,6 +29,8 @@ DATABASE_PASSWORD=<password>
 - Render：选择 Web Service，运行 Java 17 LTS，绑定 PostgreSQL。
 - Railway：创建 Java 服务和 PostgreSQL 插件，配置环境变量。
 - Fly.io：适合进阶用户，可用 Docker 或 Java 直接部署。
+
+Render Blueprint 已提供 `render.yaml`，会自动创建 Web Service 和 PostgreSQL 数据库，并将数据库 `connectionString` 注入到 `DATABASE_URL`。如果平台提供的是 `postgresql://...`，Docker 入口脚本会在启动时转换为 `jdbc:postgresql://...`。
 
 ## 安全要求
 

@@ -32,6 +32,7 @@ Invoke-RestMethod http://localhost:8080/api/health
 ```text
 AUTOBOOKKEEPER_API_TOKEN=your-long-random-token
 VISION_API_KEY={{API_KEY}}
+VISION_API_ENDPOINT=https://api.openai.com/v1/chat/completions
 SPRING_PROFILES_ACTIVE=cloud
 DATABASE_URL=jdbc:postgresql://host:5432/autobookkeeper
 DATABASE_USERNAME=postgres
@@ -65,6 +66,7 @@ Invoke-RestMethod http://localhost:18080/api/health
 ```text
 AUTOBOOKKEEPER_API_TOKEN
 VISION_API_KEY
+VISION_API_ENDPOINT
 ```
 
 Render 的 PostgreSQL `connectionString` 默认是 `postgresql://...`。项目的 Docker 入口脚本会自动转换为 Spring Boot 需要的 `jdbc:postgresql://...`。
