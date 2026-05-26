@@ -22,6 +22,9 @@
         .status.processed { background: #ecfdf5; color: #047857; }
         .actions { text-align: right; }
         .notice { padding: 10px 12px; border-radius: 12px; background: #fef2f2; color: #b91c1c; margin-bottom: 12px; display: none; }
+        .summary-total { font-size: 32px; font-weight: 900; color: #0f766e; margin: 8px 0; }
+        .summary-categories { display: flex; flex-wrap: wrap; gap: 8px; }
+        .summary-chip { background: #f1f5f9; border-radius: 999px; padding: 6px 10px; color: #334155; font-size: 13px; }
     </style>
 </head>
 <body>
@@ -36,6 +39,10 @@
         <button onclick="saveToken()">保存并刷新</button>
     </section>
     <section class="card">
+        <h2>本月支出</h2>
+        <div id="summary">加载中...</div>
+    </section>
+    <section class="card">
         <h2>最近账目</h2>
         <div id="notice" class="notice"></div>
         <div id="transactions">加载中...</div>
@@ -47,7 +54,34 @@
 
     function saveToken() {
         localStorage.setItem('autobookkeeper-token', tokenInput.value);
+        loadSummary();
         loadTransactions();
+    }
+
+    function currentMonth() {
+        const now = new Date();
+        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    async function loadSummary() {
+        const headers = {};
+        const token = localStorage.getItem('autobookkeeper-token');
+        if (token) headers['X-API-Token'] = token;
+        const container = document.getElementById('summary');
+        try {
+            const response = await fetch(`/api/transactions/summary?month=${currentMonth()}`, { headers });
+            if (!response.ok) throw new Error(response.status === 401 ? 'Token 无效或未填写。' : '加载汇总失败。');
+            const data = await response.json();
+            const chips = (data.categorySummaries || []).map(item => `<span class="summary-chip">${escapeHtml(item.category)} ¥${item.amount}</span>`).join('');
+            container.innerHTML = `
+                <div class="meta">${data.month}</div>
+                <div class="summary-total">¥${data.totalAmount}</div>
+                <div class="summary-categories">${chips || '<span class="meta">暂无分类支出</span>'}</div>
+            `;
+        } catch (error) {
+            container.innerHTML = '<p class="meta">汇总加载失败。</p>';
+            showNotice(error.message);
+        }
     }
 
     async function loadTransactions() {
@@ -106,6 +140,7 @@
                 showNotice(response.status === 401 ? 'Token 无效或未填写。' : '标记失败，请稍后重试。');
                 return;
             }
+            loadSummary();
             loadTransactions();
         } catch (error) {
             showNotice(error.message);
@@ -123,6 +158,7 @@
             showNotice(response.status === 401 ? 'Token 无效或未填写。' : '删除失败，请稍后重试。');
             return;
         }
+        loadSummary();
         loadTransactions();
     }
 
@@ -158,6 +194,7 @@
         return String(value || '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
     }
 
+    loadSummary();
     loadTransactions();
 </script>
 </body>

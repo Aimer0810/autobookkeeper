@@ -99,4 +99,61 @@ class TransactionControllerTest {
                         .header("X-API-Token", "test-token"))
                 .andExpect(status().isNotFound());
     }
+
+    @Test
+    void summarizesMonthlySpendingByCategory() throws Exception {
+        transactionRepository.save(new Transaction(
+                LocalDate.of(2026, 5, 1),
+                new BigDecimal("10.00"),
+                "早餐店",
+                "餐饮",
+                "raw text",
+                "{}",
+                0.95,
+                ProcessingStatus.PROCESSED,
+                "ios-shortcuts",
+                Instant.parse("2026-05-01T12:00:00Z")
+        ));
+        transactionRepository.save(new Transaction(
+                LocalDate.of(2026, 5, 2),
+                new BigDecimal("25.50"),
+                "地铁",
+                "交通",
+                "raw text",
+                "{}",
+                0.95,
+                ProcessingStatus.PROCESSED,
+                "ios-shortcuts",
+                Instant.parse("2026-05-02T12:00:00Z")
+        ));
+        transactionRepository.save(new Transaction(
+                LocalDate.of(2026, 4, 30),
+                new BigDecimal("99.00"),
+                "上月账目",
+                "购物",
+                "raw text",
+                "{}",
+                0.95,
+                ProcessingStatus.PROCESSED,
+                "ios-shortcuts",
+                Instant.parse("2026-04-30T12:00:00Z")
+        ));
+
+        mockMvc.perform(get("/api/transactions/summary?month=2026-05")
+                        .header("X-API-Token", "test-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.month").value("2026-05"))
+                .andExpect(jsonPath("$.totalAmount").value(35.50))
+                .andExpect(jsonPath("$.categorySummaries[0].category").value("餐饮"))
+                .andExpect(jsonPath("$.categorySummaries[0].amount").value(10.00))
+                .andExpect(jsonPath("$.categorySummaries[1].category").value("交通"))
+                .andExpect(jsonPath("$.categorySummaries[1].amount").value(25.50));
+    }
+
+    @Test
+    void rejectsInvalidSummaryMonth() throws Exception {
+        mockMvc.perform(get("/api/transactions/summary?month=bad")
+                        .header("X-API-Token", "test-token"))
+                .andExpect(status().isBadRequest());
+    }
 }

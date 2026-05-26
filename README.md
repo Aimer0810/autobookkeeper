@@ -84,6 +84,12 @@ Invoke-RestMethod https://your-domain.example/api/process -Method Post -ContentT
 Invoke-RestMethod 'https://your-domain.example/api/transactions?page=0&size=20' -Headers @{ 'X-API-Token' = 'your-token' }
 ```
 
+查询月度汇总：
+
+```powershell
+Invoke-RestMethod 'https://your-domain.example/api/transactions/summary?month=2026-05' -Headers @{ 'X-API-Token' = 'your-token' }
+```
+
 人工复核或修正 AI 识别结果：
 
 ```powershell
