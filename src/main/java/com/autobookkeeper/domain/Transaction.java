@@ -109,4 +109,25 @@ public class Transaction {
     public Instant getCreatedAt() {
         return createdAt;
     }
+
+    public void update(LocalDate transactionDate, BigDecimal amount, String merchant, String category, ProcessingStatus status) {
+        if (transactionDate != null) {
+            this.transactionDate = transactionDate;
+        }
+        if (amount != null) {
+            this.amount = amount;
+        }
+        if (merchant != null && !merchant.isBlank()) {
+            this.merchant = merchant;
+        }
+        if (category != null && !category.isBlank()) {
+            this.category = category;
+        }
+        if (status != null) {
+            this.status = status;
+            if (status == ProcessingStatus.PROCESSED) {
+                this.confidence = Math.max(this.confidence, 1.0);
+            }
+        }
+    }
 }

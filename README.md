@@ -84,6 +84,13 @@ Invoke-RestMethod https://your-domain.example/api/process -Method Post -ContentT
 Invoke-RestMethod 'https://your-domain.example/api/transactions?page=0&size=20' -Headers @{ 'X-API-Token' = 'your-token' }
 ```
 
+人工复核或修正 AI 识别结果：
+
+```powershell
+$review = @{ transactionDate = '2026-05-25'; amount = 18.50; merchant = '星巴克'; category = '餐饮'; status = 'PROCESSED' } | ConvertTo-Json
+Invoke-RestMethod 'https://your-domain.example/api/transactions/1' -Method Patch -ContentType 'application/json' -Headers @{ 'X-API-Token' = 'your-token' } -Body $review
+```
+
 ## 隐私默认值
 
 - 不硬编码真实 AI Key。
