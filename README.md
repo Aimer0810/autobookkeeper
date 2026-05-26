@@ -27,6 +27,16 @@ http://localhost:8080
 Invoke-RestMethod http://localhost:8080/api/health
 ```
 
+响应会包含运行状态、版本和当前 profile：
+
+```json
+{
+  "status": "UP",
+  "version": "0.1.0",
+  "profiles": ["local"]
+}
+```
+
 ## 环境变量
 
 ```text
