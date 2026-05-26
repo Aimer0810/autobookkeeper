@@ -91,6 +91,12 @@ $review = @{ transactionDate = '2026-05-25'; amount = 18.50; merchant = '星巴�
 Invoke-RestMethod 'https://your-domain.example/api/transactions/1' -Method Patch -ContentType 'application/json' -Headers @{ 'X-API-Token' = 'your-token' } -Body $review
 ```
 
+删除误识别账目：
+
+```powershell
+Invoke-RestMethod 'https://your-domain.example/api/transactions/1' -Method Delete -Headers @{ 'X-API-Token' = 'your-token' }
+```
+
 ## 隐私默认值
 
 - 不硬编码真实 AI Key。

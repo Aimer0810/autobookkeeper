@@ -16,6 +16,8 @@ import java.time.Instant;
 import java.time.LocalDate;
 
 import static org.springframework.http.MediaType.APPLICATION_JSON;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -72,5 +74,29 @@ class TransactionControllerTest {
                 .andExpect(jsonPath("$.merchant").value("星巴克"))
                 .andExpect(jsonPath("$.category").value("餐饮"))
                 .andExpect(jsonPath("$.status").value("PROCESSED"));
+    }
+
+    @Test
+    void deletesTransaction() throws Exception {
+        Transaction transaction = transactionRepository.save(new Transaction(
+                LocalDate.of(2026, 5, 26),
+                new BigDecimal("19.90"),
+                "误识别商户",
+                "待分类",
+                "raw text",
+                "{}",
+                0.45,
+                ProcessingStatus.NEEDS_REVIEW,
+                "ios-shortcuts",
+                Instant.parse("2026-05-26T12:00:00Z")
+        ));
+
+        mockMvc.perform(delete("/api/transactions/" + transaction.getId())
+                        .header("X-API-Token", "test-token"))
+                .andExpect(status().isNoContent());
+
+        mockMvc.perform(get("/api/transactions/" + transaction.getId())
+                        .header("X-API-Token", "test-token"))
+                .andExpect(status().isNotFound());
     }
 }

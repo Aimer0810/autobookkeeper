@@ -5,6 +5,8 @@ import com.autobookkeeper.api.dto.UpdateTransactionRequest;
 import com.autobookkeeper.repository.TransactionRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -47,5 +49,14 @@ public class TransactionController {
                     return TransactionResponse.from(transactionRepository.save(transaction));
                 })
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Transaction not found"));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> delete(@PathVariable Long id) {
+        if (!transactionRepository.existsById(id)) {
+            throw new ResponseStatusException(NOT_FOUND, "Transaction not found");
+        }
+        transactionRepository.deleteById(id);
+        return ResponseEntity.noContent().build();
     }
 }
