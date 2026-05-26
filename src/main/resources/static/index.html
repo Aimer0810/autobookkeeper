@@ -10,12 +10,17 @@
         main { max-width: 960px; margin: 0 auto; padding: 18px; }
         .card { background: white; border-radius: 18px; box-shadow: 0 10px 30px rgba(15, 23, 42, .08); padding: 18px; margin-bottom: 16px; }
         input { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #d7dce8; border-radius: 12px; }
-        button { margin-top: 10px; padding: 12px 16px; border: 0; border-radius: 12px; background: #1d4ed8; color: white; font-weight: 700; }
+        button { margin-top: 10px; padding: 12px 16px; border: 0; border-radius: 12px; background: #1d4ed8; color: white; font-weight: 700; cursor: pointer; }
+        button.secondary { background: #f97316; }
         .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border-bottom: 1px solid #edf0f7; padding: 12px 0; }
         .merchant { font-weight: 700; }
         .meta { color: #64748b; font-size: 13px; margin-top: 4px; }
         .amount { font-weight: 800; color: #0f766e; }
         .status { display: inline-block; padding: 3px 8px; border-radius: 999px; background: #eef2ff; color: #3730a3; font-size: 12px; }
+        .status.review { background: #fff7ed; color: #c2410c; }
+        .status.processed { background: #ecfdf5; color: #047857; }
+        .actions { text-align: right; }
+        .notice { padding: 10px 12px; border-radius: 12px; background: #fef2f2; color: #b91c1c; margin-bottom: 12px; display: none; }
     </style>
 </head>
 <body>
@@ -31,6 +36,7 @@
     </section>
     <section class="card">
         <h2>最近账目</h2>
+        <div id="notice" class="notice"></div>
         <div id="transactions">加载中...</div>
     </section>
 </main>
@@ -48,8 +54,10 @@
         const token = localStorage.getItem('autobookkeeper-token');
         if (token) headers['X-API-Token'] = token;
         const container = document.getElementById('transactions');
+        hideNotice();
         try {
             const response = await fetch('/api/transactions?page=0&size=50', { headers });
+            if (!response.ok) throw new Error(response.status === 401 ? 'Token 无效或未填写。' : '加载账目失败。');
             const data = await response.json();
             const rows = data.content || [];
             if (rows.length === 0) {
@@ -60,14 +68,74 @@
                 <div class="row">
                     <div>
                         <div class="merchant">${escapeHtml(item.merchant)}</div>
-                        <div class="meta">${item.transactionDate || ''} · ${escapeHtml(item.category)} · <span class="status">${item.status}</span></div>
+                        <div class="meta">${item.transactionDate || ''} · ${escapeHtml(item.category)} · <span class="status ${statusClass(item.status)}">${statusLabel(item.status)}</span></div>
                     </div>
-                    <div class="amount">¥${item.amount}</div>
+                    <div class="actions">
+                        <div class="amount">¥${item.amount}</div>
+                        ${item.status === 'NEEDS_REVIEW' ? `<button class="secondary" onclick="markProcessed(${item.id})">标记已处理</button>` : ''}
+                    </div>
                 </div>
             `).join('');
         } catch (error) {
             container.innerHTML = '<p class="meta">加载失败，请检查后端服务和网络。</p>';
+            showNotice(error.message);
         }
+    }
+
+    async function markProcessed(id) {
+        try {
+            const token = localStorage.getItem('autobookkeeper-token');
+            const item = await fetchTransaction(id, token);
+            const response = await fetch(`/api/transactions/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? {'X-API-Token': token} : {})
+                },
+                body: JSON.stringify({
+                    transactionDate: item.transactionDate,
+                    amount: item.amount,
+                    merchant: item.merchant,
+                    category: item.category,
+                    status: 'PROCESSED'
+                })
+            });
+            if (!response.ok) {
+                showNotice(response.status === 401 ? 'Token 无效或未填写。' : '标记失败，请稍后重试。');
+                return;
+            }
+            loadTransactions();
+        } catch (error) {
+            showNotice(error.message);
+        }
+    }
+
+    async function fetchTransaction(id, token) {
+        const response = await fetch(`/api/transactions/${id}`, {
+            headers: token ? {'X-API-Token': token} : {}
+        });
+        if (!response.ok) throw new Error('读取账目失败。');
+        return response.json();
+    }
+
+    function statusLabel(status) {
+        return status === 'NEEDS_REVIEW' ? '需复核' : status === 'PROCESSED' ? '已处理' : status;
+    }
+
+    function statusClass(status) {
+        return status === 'NEEDS_REVIEW' ? 'review' : status === 'PROCESSED' ? 'processed' : '';
+    }
+
+    function showNotice(message) {
+        const notice = document.getElementById('notice');
+        notice.textContent = message;
+        notice.style.display = 'block';
+    }
+
+    function hideNotice() {
+        const notice = document.getElementById('notice');
+        notice.textContent = '';
+        notice.style.display = 'none';
     }
 
     function escapeHtml(value) {
