@@ -69,4 +69,17 @@ class CloudVisionServiceImplTest {
             server.stop(0);
         }
     }
+
+    @Test
+    void usesConfiguredVisionModelInRequestBody() {
+        CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
+                "",
+                new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500, "https://example.com/v1/chat/completions", "qwen3.6-flash"),
+                new AutoBookkeeperProperties.Privacy(false, true)
+        ));
+
+        String requestBody = service.buildVisionRequest("image-bytes".getBytes());
+
+        assertThat(requestBody).contains("\"model\":\"qwen3.6-flash\"");
+    }
 }

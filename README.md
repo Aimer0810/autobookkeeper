@@ -43,6 +43,7 @@ Invoke-RestMethod http://localhost:8080/api/health
 AUTOBOOKKEEPER_API_TOKEN=your-long-random-token
 VISION_API_KEY={{API_KEY}}
 VISION_API_ENDPOINT=https://api.openai.com/v1/chat/completions
+VISION_MODEL=gpt-4o-mini
 SPRING_PROFILES_ACTIVE=cloud
 DATABASE_URL=jdbc:postgresql://host:5432/autobookkeeper
 DATABASE_USERNAME=postgres
@@ -50,6 +51,13 @@ DATABASE_PASSWORD=your-password
 ```
 
 可以复制 `.env.example` 作为部署平台的环境变量清单。不要把真实 `.env` 文件提交到 Git。
+
+使用阿里云百炼 OpenAI 兼容接口时，可以设置：
+
+```text
+VISION_API_ENDPOINT=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+VISION_MODEL=qwen3.6-flash
+```
 
 ## Docker 部署
 

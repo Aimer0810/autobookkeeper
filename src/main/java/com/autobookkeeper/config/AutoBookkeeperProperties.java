@@ -8,9 +8,13 @@ public record AutoBookkeeperProperties(
         Ai ai,
         Privacy privacy
 ) {
-    public record Ai(String provider, String apiKey, int timeoutMs, String endpoint) {
+    public record Ai(String provider, String apiKey, int timeoutMs, String endpoint, String model) {
         public Ai(String provider, String apiKey, int timeoutMs) {
-            this(provider, apiKey, timeoutMs, "https://api.openai.com/v1/chat/completions");
+            this(provider, apiKey, timeoutMs, "https://api.openai.com/v1/chat/completions", "gpt-4o-mini");
+        }
+
+        public Ai(String provider, String apiKey, int timeoutMs, String endpoint) {
+            this(provider, apiKey, timeoutMs, endpoint, "gpt-4o-mini");
         }
     }
 

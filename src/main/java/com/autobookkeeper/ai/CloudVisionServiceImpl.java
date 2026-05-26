@@ -68,7 +68,7 @@ public class CloudVisionServiceImpl implements AIService {
 
     String buildVisionRequest(byte[] imageData) {
         ObjectNode root = objectMapper.createObjectNode();
-        root.put("model", "gpt-4o-mini");
+        root.put("model", model());
         root.put("max_tokens", 500);
         ObjectNode responseFormat = root.putObject("response_format");
         responseFormat.put("type", "json_object");
@@ -118,6 +118,12 @@ public class CloudVisionServiceImpl implements AIService {
 
     private int timeoutMs() {
         return properties.ai() == null || properties.ai().timeoutMs() <= 0 ? 2500 : properties.ai().timeoutMs();
+    }
+
+    private String model() {
+        return properties.ai() == null || properties.ai().model() == null || properties.ai().model().isBlank()
+                ? "gpt-4o-mini"
+                : properties.ai().model();
     }
 
     private Bill reviewBill(String rawText, String structuredJson) {
