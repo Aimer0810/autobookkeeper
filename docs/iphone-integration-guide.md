@@ -9,14 +9,12 @@
 1. 创建新快捷指令，启用“在共享表单中显示”。
 2. 接收类型选择“图像”。
 3. 添加“获取快捷指令输入”。
-4. 添加“编码媒体”，格式选择 Base64。
-5. 添加“文本”，内容为：
+4. 添加“编码媒体”，输入选择“快捷指令输入”，格式选择 Base64。
+5. 添加“词典”，加入两个键：
 
-```json
-{
-  "imageBase64": "编码媒体的结果",
-  "source": "ios-shortcuts"
-}
+```text
+imageBase64 = 编码媒体的结果
+source = ios-shortcuts
 ```
 
 6. 添加“获取 URL 内容”。
@@ -34,8 +32,81 @@ Content-Type: application/json
 X-API-Token: <your-token>
 ```
 
-10. 请求正文选择 JSON，把 `imageBase64` 设置为 Base64 编码结果，把 `source` 设置为 `ios-shortcuts`。
-11. 添加“显示结果”，显示商家、金额、分类和是否需要复核。
+10. 请求正文选择 JSON，请求体使用上一步创建的词典。
+11. 添加“获取词典值”，从请求结果中分别读取：
+
+```text
+merchant
+amount
+category
+status
+needsReview
+transactionId
+```
+
+12. 添加“显示结果”，内容示例：
+
+```text
+已记账：merchant
+金额：amount
+分类：category
+状态：status
+需要复核：needsReview
+交易 ID：transactionId
+```
+
+如果你的 iOS 版本不方便用“词典”构造 JSON，也可以使用“文本”动作手写 JSON，并将 `编码媒体的结果` 插入到 `imageBase64` 字段：
+
+```json
+{
+  "imageBase64": "编码媒体的结果",
+  "source": "ios-shortcuts"
+}
+```
+
+## 后端请求格式
+
+URL：
+
+```text
+https://<your-backend-domain>/api/process
+```
+
+Method：
+
+```text
+POST
+```
+
+Headers：
+
+```text
+Content-Type: application/json
+X-API-Token: <your-token>
+```
+
+Body：
+
+```json
+{
+  "imageBase64": "<base64-encoded-screenshot>",
+  "source": "ios-shortcuts"
+}
+```
+
+响应示例：
+
+```json
+{
+  "transactionId": 1,
+  "status": "NEEDS_REVIEW",
+  "merchant": "待复核",
+  "amount": 0,
+  "category": "待分类",
+  "confidence": 0.2,
+  "needsReview": true
+}
+```
 
 ## 注意事项
 
