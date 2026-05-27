@@ -7,6 +7,7 @@ import org.springframework.boot.context.properties.bind.ConstructorBinding;
 public record AutoBookkeeperProperties(
         String apiToken,
         String userTokens,
+        String inviteCode,
         Ai ai,
         Privacy privacy
 ) {
@@ -15,7 +16,7 @@ public record AutoBookkeeperProperties(
     }
 
     public AutoBookkeeperProperties(String apiToken, Ai ai, Privacy privacy) {
-        this(apiToken, "", ai, privacy);
+        this(apiToken, "", "", ai, privacy);
     }
 
     public record Ai(String provider, String apiKey, int timeoutMs, String endpoint, String model) {

@@ -51,12 +51,19 @@
         .detail-block { margin-top: 12px; }
         .detail-block h3 { margin: 0 0 6px; font-size: 14px; color: #334155; }
         .detail-pre { max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-word; background: #0f172a; color: #e2e8f0; border-radius: 12px; padding: 12px; font-size: 12px; line-height: 1.5; }
+        .auth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .auth-panel { background: #f8fafc; border-radius: 16px; padding: 12px; }
+        .auth-panel h3 { margin: 0 0 10px; }
+        .auth-panel label { display: block; margin-top: 8px; font-size: 13px; color: #475569; font-weight: 700; }
+        .auth-panel input { margin-top: 6px; }
+        .token-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
         @media (max-width: 640px) {
             .row { grid-template-columns: 1fr; }
             .actions { text-align: left; }
             .modal-grid { grid-template-columns: 1fr; }
             .filter-grid { grid-template-columns: 1fr; }
             .summary-grid { grid-template-columns: 1fr; }
+            .auth-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -67,9 +74,43 @@
 </header>
 <main>
     <section class="card">
-        <label for="token">API Token</label>
-        <input id="token" type="password" placeholder="输入 X-API-Token 后保存到本浏览器">
-        <button onclick="saveToken()">保存并刷新</button>
+        <h2>账号</h2>
+        <p id="accountStatus" class="meta">未登录</p>
+        <div class="auth-grid">
+            <div class="auth-panel">
+                <h3>登录</h3>
+                <label>用户名
+                    <input id="loginUsername" type="text" autocomplete="username">
+                </label>
+                <label>密码
+                    <input id="loginPassword" type="password" autocomplete="current-password">
+                </label>
+                <button onclick="loginAccount()">登录并刷新</button>
+            </div>
+            <div class="auth-panel">
+                <h3>注册</h3>
+                <label>用户名
+                    <input id="registerUsername" type="text" autocomplete="username">
+                </label>
+                <label>密码
+                    <input id="registerPassword" type="password" autocomplete="new-password">
+                </label>
+                <label>邀请码
+                    <input id="registerInviteCode" type="password">
+                </label>
+                <button onclick="registerAccount()">注册并登录</button>
+            </div>
+        </div>
+        <div class="token-actions">
+            <button class="secondary" onclick="copyToken()">复制快捷指令 Token</button>
+            <button class="muted" onclick="logoutAccount()">退出登录</button>
+        </div>
+        <details>
+            <summary class="meta">已有 API Token / 旧版手动输入</summary>
+            <label for="token">API Token</label>
+            <input id="token" type="password" placeholder="输入 X-API-Token 后保存到本浏览器">
+            <button onclick="saveToken()">保存并刷新</button>
+        </details>
     </section>
     <section class="card">
         <h2>月份账目</h2>
@@ -163,6 +204,7 @@
 <script>
     const tokenInput = document.getElementById('token');
     tokenInput.value = localStorage.getItem('autobookkeeper-token') || '';
+    updateAccountStatus();
     document.getElementById('monthFilter').value = currentMonth();
     const categoriesByType = {
         '支出': ['餐饮', '交通', '购物', '住房', '医疗', '娱乐', '生活缴费', '转账', '其他', '未分类'],
@@ -173,7 +215,70 @@
 
     function saveToken() {
         localStorage.setItem('autobookkeeper-token', tokenInput.value);
+        localStorage.removeItem('autobookkeeper-username');
+        updateAccountStatus();
         loadDashboard();
+    }
+
+    async function registerAccount() {
+        await authenticate('/api/auth/register', {
+            username: document.getElementById('registerUsername').value,
+            password: document.getElementById('registerPassword').value,
+            inviteCode: document.getElementById('registerInviteCode').value
+        });
+    }
+
+    async function loginAccount() {
+        await authenticate('/api/auth/login', {
+            username: document.getElementById('loginUsername').value,
+            password: document.getElementById('loginPassword').value
+        });
+    }
+
+    async function authenticate(url, payload) {
+        hideNotice();
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            if (!response.ok) throw new Error(response.status === 401 ? '用户名或密码错误。' : response.status === 403 ? '邀请码错误。' : response.status === 409 ? '用户名已存在。' : '账号操作失败。');
+            const data = await response.json();
+            localStorage.setItem('autobookkeeper-token', data.token);
+            localStorage.setItem('autobookkeeper-username', data.username);
+            tokenInput.value = data.token;
+            updateAccountStatus();
+            loadDashboard();
+        } catch (error) {
+            showNotice(error.message);
+        }
+    }
+
+    function logoutAccount() {
+        localStorage.removeItem('autobookkeeper-token');
+        localStorage.removeItem('autobookkeeper-username');
+        tokenInput.value = '';
+        updateAccountStatus();
+        latestTransactions = [];
+        document.getElementById('summary').innerHTML = '<p class="meta">请先登录。</p>';
+        document.getElementById('transactions').innerHTML = '<p class="meta">请先登录。</p>';
+    }
+
+    async function copyToken() {
+        const token = localStorage.getItem('autobookkeeper-token');
+        if (!token) {
+            showNotice('请先登录或保存 Token。');
+            return;
+        }
+        await navigator.clipboard.writeText(token);
+        showNotice('Token 已复制，可粘贴到 iPhone 快捷指令的 X-API-Token。');
+    }
+
+    function updateAccountStatus() {
+        const username = localStorage.getItem('autobookkeeper-username');
+        const token = localStorage.getItem('autobookkeeper-token');
+        document.getElementById('accountStatus').textContent = username ? `已登录：${username}` : token ? '已保存 API Token' : '未登录';
     }
 
     function loadDashboard() {

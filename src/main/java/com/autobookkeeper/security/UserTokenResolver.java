@@ -1,6 +1,7 @@
 package com.autobookkeeper.security;
 
 import com.autobookkeeper.config.AutoBookkeeperProperties;
+import com.autobookkeeper.user.AppUserRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.Arrays;
@@ -12,16 +13,22 @@ public class UserTokenResolver {
     public static final String DEFAULT_OWNER_KEY = "default";
 
     private final AutoBookkeeperProperties properties;
+    private final AppUserRepository appUserRepository;
 
-    public UserTokenResolver(AutoBookkeeperProperties properties) {
+    public UserTokenResolver(AutoBookkeeperProperties properties, AppUserRepository appUserRepository) {
         this.properties = properties;
+        this.appUserRepository = appUserRepository;
     }
 
     public Optional<AuthenticatedUser> resolve(String providedToken) {
         if (providedToken == null || providedToken.isBlank()) {
             return Optional.empty();
         }
-        Optional<AuthenticatedUser> user = resolveConfiguredUserToken(providedToken);
+        Optional<AuthenticatedUser> user = resolveDatabaseUserToken(providedToken);
+        if (user.isPresent()) {
+            return user;
+        }
+        user = resolveConfiguredUserToken(providedToken);
         if (user.isPresent()) {
             return user;
         }
@@ -33,7 +40,12 @@ public class UserTokenResolver {
     }
 
     public boolean hasConfiguredTokens() {
-        return hasText(properties.apiToken()) || hasText(properties.userTokens());
+        return appUserRepository.count() > 0 || hasText(properties.apiToken()) || hasText(properties.userTokens());
+    }
+
+    private Optional<AuthenticatedUser> resolveDatabaseUserToken(String providedToken) {
+        return appUserRepository.findByApiToken(providedToken)
+                .map(user -> new AuthenticatedUser(user.getOwnerKey()));
     }
 
     private Optional<AuthenticatedUser> resolveConfiguredUserToken(String providedToken) {

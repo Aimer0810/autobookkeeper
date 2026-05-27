@@ -4,6 +4,8 @@ import com.autobookkeeper.domain.ProcessingStatus;
 import com.autobookkeeper.domain.Transaction;
 import com.autobookkeeper.domain.TransactionType;
 import com.autobookkeeper.repository.TransactionRepository;
+import com.autobookkeeper.user.AppUser;
+import com.autobookkeeper.user.AppUserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -40,11 +42,15 @@ class TransactionControllerTest {
     private TransactionRepository transactionRepository;
 
     @Autowired
+    private AppUserRepository appUserRepository;
+
+    @Autowired
     private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void cleanDatabase() {
         transactionRepository.deleteAll();
+        appUserRepository.deleteAll();
     }
 
     @Test
@@ -131,6 +137,66 @@ class TransactionControllerTest {
                 .andExpect(jsonPath("$.content[0].merchant").value("地铁"))
                 .andExpect(jsonPath("$.content[0].type").value("支出"))
                 .andExpect(jsonPath("$.content[1].merchant").value("早餐店"));
+    }
+
+    @Test
+    void databaseUserTokensOnlySeeTheirOwnTransactions() throws Exception {
+        AppUser alice = appUserRepository.save(new AppUser(
+                "alice",
+                "$2a$10$aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                "db-alice",
+                "db-alice-token",
+                Instant.parse("2026-05-01T00:00:00Z")
+        ));
+        AppUser bob = appUserRepository.save(new AppUser(
+                "bob",
+                "$2a$10$bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+                "db-bob",
+                "db-bob-token",
+                Instant.parse("2026-05-01T00:00:00Z")
+        ));
+        Transaction aliceTransaction = new Transaction(
+                LocalDate.of(2026, 5, 1),
+                new BigDecimal("10.00"),
+                "Alice Cafe",
+                TransactionType.EXPENSE,
+                "餐饮",
+                "raw text",
+                "{}",
+                0.95,
+                ProcessingStatus.PROCESSED,
+                "ios-shortcuts",
+                Instant.parse("2026-05-01T12:00:00Z")
+        );
+        aliceTransaction.assignOwner(alice.getOwnerKey());
+        transactionRepository.save(aliceTransaction);
+        Transaction bobTransaction = new Transaction(
+                LocalDate.of(2026, 5, 2),
+                new BigDecimal("20.00"),
+                "Bob Market",
+                TransactionType.EXPENSE,
+                "购物",
+                "raw text",
+                "{}",
+                0.95,
+                ProcessingStatus.PROCESSED,
+                "ios-shortcuts",
+                Instant.parse("2026-05-02T12:00:00Z")
+        );
+        bobTransaction.assignOwner(bob.getOwnerKey());
+        transactionRepository.save(bobTransaction);
+
+        mockMvc.perform(get("/api/transactions?month=2026-05&page=0&size=10")
+                        .header("X-API-Token", "db-alice-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numberOfElements").value(1))
+                .andExpect(jsonPath("$.content[0].merchant").value("Alice Cafe"));
+
+        mockMvc.perform(get("/api/transactions?month=2026-05&page=0&size=10")
+                        .header("X-API-Token", "db-bob-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numberOfElements").value(1))
+                .andExpect(jsonPath("$.content[0].merchant").value("Bob Market"));
     }
 
     @Test
