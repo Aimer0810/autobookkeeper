@@ -48,7 +48,8 @@ public class ProcessController {
                 transaction.getAmount(),
                 transaction.getCategory(),
                 transaction.getConfidence(),
-                transaction.getStatus().name().equals("NEEDS_REVIEW")
+                transaction.getStatus().name().equals("NEEDS_REVIEW"),
+                bill.needsReview() ? bill.rawText() : ""
         );
     }
 

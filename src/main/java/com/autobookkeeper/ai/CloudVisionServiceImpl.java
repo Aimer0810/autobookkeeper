@@ -6,6 +6,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
@@ -21,6 +23,8 @@ import java.util.Base64;
 
 @Component
 public class CloudVisionServiceImpl implements AIService {
+
+    private static final Logger logger = LoggerFactory.getLogger(CloudVisionServiceImpl.class);
 
     private final AutoBookkeeperProperties properties;
     private final Environment environment;
@@ -69,10 +73,12 @@ public class CloudVisionServiceImpl implements AIService {
                     .build();
             HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
+                logger.warn("Cloud vision API returned status {} for endpoint {} model {} bodySnippet {}", response.statusCode(), endpoint, model(), abbreviate(response.body()));
                 return reviewBill("云端视觉 API 返回非成功状态：" + response.statusCode(), "{\"provider\":\"cloud\",\"status\":" + response.statusCode() + "}");
             }
             return parseBillJson(extractContent(response.body()));
         } catch (Exception exception) {
+            logger.warn("Cloud vision API call failed for endpoint {} model {}", endpoint, model(), exception);
             return reviewBill("云端视觉 API 调用失败，请人工复核。", "{\"provider\":\"cloud\",\"error\":\"vision-api-call-failed\"}");
         }
     }
@@ -118,6 +124,7 @@ public class CloudVisionServiceImpl implements AIService {
             double confidence = root.path("confidence").asDouble(0.0);
             return new Bill(date, amount, merchant, category, rawText, json, confidence, confidence < 0.75);
         } catch (Exception exception) {
+            logger.warn("Cloud vision JSON parsing failed. contentSnippet={}", abbreviate(json), exception);
             return reviewBill("视觉模型返回 JSON 解析失败。", json);
         }
     }
@@ -184,5 +191,12 @@ public class CloudVisionServiceImpl implements AIService {
     private String text(JsonNode root, String field, String defaultValue) {
         JsonNode node = root.path(field);
         return node.isMissingNode() || node.asText().isBlank() ? defaultValue : node.asText();
+    }
+
+    private static String abbreviate(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.length() <= 300 ? value : value.substring(0, 300);
     }
 }

@@ -11,6 +11,7 @@ public record ProcessImageResponse(
         BigDecimal amount,
         String category,
         double confidence,
-        boolean needsReview
+        boolean needsReview,
+        String reviewReason
 ) {
 }
