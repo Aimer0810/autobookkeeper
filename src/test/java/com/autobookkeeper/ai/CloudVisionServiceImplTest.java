@@ -4,6 +4,7 @@ import com.autobookkeeper.config.AutoBookkeeperProperties;
 import com.autobookkeeper.domain.Bill;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
+import org.springframework.mock.env.MockEnvironment;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -81,5 +82,44 @@ class CloudVisionServiceImplTest {
         String requestBody = service.buildVisionRequest("image-bytes".getBytes());
 
         assertThat(requestBody).contains("\"model\":\"qwen3.6-flash\"");
+    }
+
+    @Test
+    void usesEnvironmentAiConfigurationWhenPropertiesRecordContainsDefaults() throws IOException {
+        AtomicReference<String> authorization = new AtomicReference<>("");
+        AtomicReference<String> requestBody = new AtomicReference<>("");
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/v1/chat/completions", exchange -> {
+            authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
+            requestBody.set(new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8));
+            byte[] response = """
+                    {"choices":[{"message":{"content":"{\\"date\\":\\"2026-05-25\\",\\"amount\\":\\"18.60\\",\\"merchant\\":\\"便利店\\",\\"category\\":\\"购物\\",\\"confidence\\":0.88,\\"rawText\\":\\"便利店 18.60\\"}"}}]}
+                    """.getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, response.length);
+            exchange.getResponseBody().write(response);
+            exchange.close();
+        });
+        server.start();
+        try {
+            MockEnvironment environment = new MockEnvironment()
+                    .withProperty("autobookkeeper.ai.api-key", "environment-test-key")
+                    .withProperty("autobookkeeper.ai.endpoint", "http://localhost:" + server.getAddress().getPort() + "/v1/chat/completions")
+                    .withProperty("autobookkeeper.ai.model", "qwen3.6-flash")
+                    .withProperty("autobookkeeper.ai.timeout-ms", "30000");
+            CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
+                    "",
+                    new AutoBookkeeperProperties.Ai("cloud", "{{API_KEY}}", 2500),
+                    new AutoBookkeeperProperties.Privacy(false, true)
+            ), environment);
+
+            Bill bill = service.extractBillFromImage("image-bytes".getBytes());
+
+            assertThat(authorization.get()).isEqualTo("Bearer environment-test-key");
+            assertThat(requestBody.get()).contains("\"model\":\"qwen3.6-flash\"");
+            assertThat(bill.amount()).isEqualByComparingTo(new BigDecimal("18.60"));
+            assertThat(bill.needsReview()).isFalse();
+        } finally {
+            server.stop(0);
+        }
     }
 }

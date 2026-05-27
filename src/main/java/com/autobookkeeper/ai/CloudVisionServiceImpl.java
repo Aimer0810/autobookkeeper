@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.core.env.Environment;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -22,24 +23,34 @@ import java.util.Base64;
 public class CloudVisionServiceImpl implements AIService {
 
     private final AutoBookkeeperProperties properties;
+    private final Environment environment;
     private final ObjectMapper objectMapper = new ObjectMapper();
     private final URI endpoint;
 
     @Autowired
-    public CloudVisionServiceImpl(AutoBookkeeperProperties properties) {
-        this(properties, URI.create(properties.ai() == null || properties.ai().endpoint() == null || properties.ai().endpoint().isBlank()
-                ? "https://api.openai.com/v1/chat/completions"
-                : properties.ai().endpoint()));
+    public CloudVisionServiceImpl(AutoBookkeeperProperties properties, Environment environment) {
+        this(properties, environment, URI.create(environment.getProperty("autobookkeeper.ai.endpoint", configuredEndpoint(properties))));
     }
 
     public CloudVisionServiceImpl(AutoBookkeeperProperties properties, URI endpoint) {
         this.properties = properties;
+        this.environment = null;
+        this.endpoint = endpoint;
+    }
+
+    public CloudVisionServiceImpl(AutoBookkeeperProperties properties) {
+        this(properties, URI.create(configuredEndpoint(properties)));
+    }
+
+    CloudVisionServiceImpl(AutoBookkeeperProperties properties, Environment environment, URI endpoint) {
+        this.properties = properties;
+        this.environment = environment;
         this.endpoint = endpoint;
     }
 
     @Override
     public Bill extractBillFromImage(byte[] imageData) {
-        String apiKey = properties.ai() == null ? "{{API_KEY}}" : properties.ai().apiKey();
+        String apiKey = apiKey();
         if (apiKey == null || apiKey.isBlank() || "{{API_KEY}}".equals(apiKey)) {
             return reviewBill(
                     "云端视觉 API Key 未配置，未向外部服务发送截图。",
@@ -117,13 +128,44 @@ public class CloudVisionServiceImpl implements AIService {
     }
 
     private int timeoutMs() {
-        return properties.ai() == null || properties.ai().timeoutMs() <= 0 ? 2500 : properties.ai().timeoutMs();
+        if (environment != null) {
+            return environment.getProperty("autobookkeeper.ai.timeout-ms", Integer.class, configuredTimeoutMs(properties));
+        }
+        return configuredTimeoutMs(properties);
     }
 
     private String model() {
+        if (environment != null) {
+            return environment.getProperty("autobookkeeper.ai.model", configuredModel(properties));
+        }
+        return configuredModel(properties);
+    }
+
+    private String apiKey() {
+        if (environment != null) {
+            return environment.getProperty("autobookkeeper.ai.api-key", configuredApiKey(properties));
+        }
+        return configuredApiKey(properties);
+    }
+
+    private static String configuredEndpoint(AutoBookkeeperProperties properties) {
+        return properties.ai() == null || properties.ai().endpoint() == null || properties.ai().endpoint().isBlank()
+                ? "https://api.openai.com/v1/chat/completions"
+                : properties.ai().endpoint();
+    }
+
+    private static int configuredTimeoutMs(AutoBookkeeperProperties properties) {
+        return properties.ai() == null || properties.ai().timeoutMs() <= 0 ? 2500 : properties.ai().timeoutMs();
+    }
+
+    private static String configuredModel(AutoBookkeeperProperties properties) {
         return properties.ai() == null || properties.ai().model() == null || properties.ai().model().isBlank()
                 ? "gpt-4o-mini"
                 : properties.ai().model();
+    }
+
+    private static String configuredApiKey(AutoBookkeeperProperties properties) {
+        return properties.ai() == null ? "{{API_KEY}}" : properties.ai().apiKey();
     }
 
     private Bill reviewBill(String rawText, String structuredJson) {

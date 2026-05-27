@@ -28,7 +28,18 @@ public class HealthController {
         return Map.of(
                 "status", "UP",
                 "version", version,
-                "profiles", profiles
+                "profiles", profiles,
+                "ai", aiHealth()
+        );
+    }
+
+    private Map<String, Object> aiHealth() {
+        String apiKey = environment.getProperty("autobookkeeper.ai.api-key");
+        return Map.of(
+                "apiKeyConfigured", apiKey != null && !apiKey.isBlank() && !"{{API_KEY}}".equals(apiKey),
+                "endpoint", environment.getProperty("autobookkeeper.ai.endpoint", ""),
+                "model", environment.getProperty("autobookkeeper.ai.model", ""),
+                "timeoutMs", environment.getProperty("autobookkeeper.ai.timeout-ms", Integer.class, 0)
         );
     }
 }

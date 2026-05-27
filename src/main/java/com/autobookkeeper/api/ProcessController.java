@@ -35,7 +35,7 @@ public class ProcessController {
     public ProcessImageResponse process(@Valid @RequestBody ProcessImageRequest request) {
         byte[] imageData;
         try {
-            imageData = Base64.getDecoder().decode(request.imageBase64());
+            imageData = Base64.getDecoder().decode(normalizeBase64(request.imageBase64()));
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "imageBase64 must be valid Base64");
         }
@@ -50,5 +50,14 @@ public class ProcessController {
                 transaction.getConfidence(),
                 transaction.getStatus().name().equals("NEEDS_REVIEW")
         );
+    }
+
+    private String normalizeBase64(String imageBase64) {
+        String value = imageBase64;
+        int commaIndex = value.indexOf(',');
+        if (value.startsWith("data:") && commaIndex >= 0) {
+            value = value.substring(commaIndex + 1);
+        }
+        return value.replaceAll("\\s", "");
     }
 }

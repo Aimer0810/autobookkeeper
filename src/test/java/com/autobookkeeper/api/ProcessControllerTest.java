@@ -57,6 +57,20 @@ class ProcessControllerTest {
     }
 
     @Test
+    void processesBase64ImageWithLineBreaks() throws Exception {
+        String base64 = Base64.getEncoder().encodeToString("fake-image".getBytes());
+        String base64WithLineBreak = base64.substring(0, 4) + "\\n" + base64.substring(4);
+
+        mockMvc.perform(post("/api/process")
+                        .header("X-API-Token", "test-token")
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"imageBase64\":\"" + base64WithLineBreak + "\",\"source\":\"ios-shortcuts\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.transactionId").exists())
+                .andExpect(jsonPath("$.needsReview").value(true));
+    }
+
+    @Test
     void rejectsTransactionListWithoutApiTokenWhenConfigured() throws Exception {
         mockMvc.perform(get("/api/transactions"))
                 .andExpect(status().isUnauthorized());
