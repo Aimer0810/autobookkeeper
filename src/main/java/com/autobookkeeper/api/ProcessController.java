@@ -48,6 +48,7 @@ public class ProcessController {
         Transaction transaction = transactionRepository.save(transactionToSave);
         return new ProcessImageResponse(
                 transaction.getId(),
+                transaction.getTransactionDate(),
                 transaction.getStatus(),
                 transaction.getMerchant(),
                 transaction.getAmount(),

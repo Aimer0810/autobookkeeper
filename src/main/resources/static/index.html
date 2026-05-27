@@ -144,6 +144,9 @@
             <label>搜索商户
                 <input id="merchantSearch" type="search" placeholder="输入商户关键字" oninput="renderTransactions()">
             </label>
+            <label>交易 ID
+                <input id="transactionIdSearch" type="search" placeholder="例如 33" oninput="renderTransactions()">
+            </label>
             <label>类型筛选
                 <select id="typeFilter" onchange="updateCategoryFilterOptions(); renderTransactions()">
                     <option value="">全部类型</option>
@@ -433,12 +436,14 @@
         const container = document.getElementById('transactions');
         const reviewOnly = document.getElementById('reviewOnly').checked;
         const merchantQuery = document.getElementById('merchantSearch').value.trim().toLowerCase();
+        const transactionIdQuery = document.getElementById('transactionIdSearch').value.trim();
         const type = document.getElementById('typeFilter').value;
         const category = document.getElementById('categoryFilter').value;
         const rows = latestTransactions.filter(item => {
             if (reviewOnly && item.status !== 'NEEDS_REVIEW') return false;
             if (type && item.type !== type) return false;
             if (category && item.category !== category) return false;
+            if (transactionIdQuery && String(item.id) !== transactionIdQuery) return false;
             if (merchantQuery && !String(item.merchant || '').toLowerCase().includes(merchantQuery)) return false;
             return true;
         });
@@ -458,7 +463,7 @@
                 <div class="row">
                     <div>
                         <div class="merchant">${escapeHtml(item.merchant)}</div>
-                        <div class="meta">${item.transactionDate || ''} · ${type} · ${escapeHtml(item.category)} · <span class="status ${statusClass(item.status)}">${statusLabel(item.status)}</span></div>
+                        <div class="meta">ID ${item.id} · ${item.transactionDate || ''} · ${type} · ${escapeHtml(item.category)} · <span class="status ${statusClass(item.status)}">${statusLabel(item.status)}</span></div>
                     </div>
                     <div class="actions">
                         <div class="amount ${amountClass}">${amountPrefix}¥${item.amount}</div>
