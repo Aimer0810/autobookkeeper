@@ -31,21 +31,7 @@ public class CompositeAIService implements AIService {
             if ("tesseract".equalsIgnoreCase(provider)) {
                 return tesseractOCRService.extractBillFromImage(imageData);
             }
-            Bill cloudBill = cloudVisionService.extractBillFromImage(imageData);
-            if (cloudBill.confidence() >= 0.75 && !cloudBill.needsReview()) {
-                return cloudBill;
-            }
-            Bill fallbackBill = tesseractOCRService.extractBillFromImage(imageData);
-            return new Bill(
-                    fallbackBill.date(),
-                    fallbackBill.amount(),
-                    fallbackBill.merchant(),
-                    fallbackBill.category(),
-                    cloudBill.rawText() + "\n" + fallbackBill.rawText(),
-                    fallbackBill.structuredJson(),
-                    Math.max(cloudBill.confidence(), fallbackBill.confidence()),
-                    true
-            );
+            return cloudVisionService.extractBillFromImage(imageData);
         } catch (RuntimeException exception) {
             return tesseractOCRService.extractBillFromImage(imageData);
         }
