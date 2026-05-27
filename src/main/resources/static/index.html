@@ -330,7 +330,7 @@
             });
             if (!response.ok) throw new Error(response.status === 403 ? '旧 token 不正确，无法迁移。' : '迁移失败。');
             const data = await response.json();
-            showNotice(`迁移完成：${data.migratedCount} 条旧账目已绑定到当前账号。`);
+            showNotice(`迁移完成：${data.migratedCount} 条旧账目已绑定到当前账号。如果当前月份仍为空，请切换到旧账单所在月份。`);
             loadDashboard();
         } catch (error) {
             showNotice(error.message);
@@ -423,7 +423,10 @@
             return true;
         });
         if (rows.length === 0) {
-            container.innerHTML = reviewOnly ? '<p class="meta">暂无需复核账目。</p>' : '<p class="meta">暂无账目。请先通过 iPhone 快捷指令上传截图。</p>';
+            container.innerHTML = reviewOnly ? '<p class="meta">暂无需复核账目。</p>' : `
+                <p class="meta">当前月份暂无账目。</p>
+                <p class="meta">如果你之前已有旧账单，请先在上方“把旧数据迁移到当前账号”输入旧版 API Token 完成迁移；如果账单不是本月，请切换月份查看。</p>
+            `;
             return;
         }
         container.innerHTML = rows.map(item => {
