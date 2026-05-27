@@ -85,6 +85,22 @@ class CloudVisionServiceImplTest {
     }
 
     @Test
+    void includesAccuracyGuidanceForChineseMerchantAndReviewConfidence() {
+        CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
+                "",
+                new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500, "https://example.com/v1/chat/completions", "qwen3.6-flash"),
+                new AutoBookkeeperProperties.Privacy(false, true)
+        ));
+
+        String requestBody = service.buildVisionRequest("image-bytes".getBytes());
+
+        assertThat(requestBody).contains("不要拼音化");
+        assertThat(requestBody).contains("未知商家");
+        assertThat(requestBody).contains("confidence 不要高于 0.74");
+        assertThat(requestBody).contains("餐饮、交通、购物、住房、医疗、娱乐、转账、其他");
+    }
+
+    @Test
     void usesEnvironmentAiConfigurationWhenPropertiesRecordContainsDefaults() throws IOException {
         AtomicReference<String> authorization = new AtomicReference<>("");
         AtomicReference<String> requestBody = new AtomicReference<>("");
