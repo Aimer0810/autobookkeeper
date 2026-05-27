@@ -2,9 +2,12 @@ package com.autobookkeeper.api;
 
 import com.autobookkeeper.api.dto.AuthRequest;
 import com.autobookkeeper.api.dto.AuthResponse;
+import com.autobookkeeper.api.dto.LegacyMigrationRequest;
+import com.autobookkeeper.api.dto.LegacyMigrationResponse;
 import com.autobookkeeper.api.dto.RegisterRequest;
 import com.autobookkeeper.user.AppUser;
 import com.autobookkeeper.user.AuthService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,5 +34,11 @@ public class AuthController {
     public AuthResponse login(@Valid @RequestBody AuthRequest request) {
         AppUser user = authService.login(request.username(), request.password());
         return new AuthResponse(user.getUsername(), user.getApiToken());
+    }
+
+    @PostMapping("/migrate-legacy")
+    public LegacyMigrationResponse migrateLegacy(@Valid @RequestBody LegacyMigrationRequest request, HttpServletRequest httpRequest) {
+        int migratedCount = authService.migrateLegacyTransactions(httpRequest.getHeader("X-API-Token"), request.legacyToken());
+        return new LegacyMigrationResponse(migratedCount);
     }
 }

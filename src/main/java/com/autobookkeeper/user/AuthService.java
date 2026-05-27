@@ -1,9 +1,11 @@
 package com.autobookkeeper.user;
 
 import com.autobookkeeper.config.AutoBookkeeperProperties;
+import com.autobookkeeper.repository.TransactionRepository;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
@@ -15,12 +17,14 @@ import java.util.Locale;
 public class AuthService {
 
     private final AppUserRepository appUserRepository;
+    private final TransactionRepository transactionRepository;
     private final AutoBookkeeperProperties properties;
     private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
     private final SecureRandom secureRandom = new SecureRandom();
 
-    public AuthService(AppUserRepository appUserRepository, AutoBookkeeperProperties properties) {
+    public AuthService(AppUserRepository appUserRepository, TransactionRepository transactionRepository, AutoBookkeeperProperties properties) {
         this.appUserRepository = appUserRepository;
+        this.transactionRepository = transactionRepository;
         this.properties = properties;
     }
 
@@ -54,6 +58,17 @@ public class AuthService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid credentials");
         }
         return user;
+    }
+
+    @Transactional
+    public int migrateLegacyTransactions(String currentApiToken, String legacyToken) {
+        AppUser user = appUserRepository.findByApiToken(currentApiToken)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Registered account token is required"));
+        String configuredLegacyToken = properties.apiToken();
+        if (configuredLegacyToken == null || configuredLegacyToken.isBlank() || !configuredLegacyToken.equals(legacyToken)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid legacy token");
+        }
+        return transactionRepository.migrateLegacyTransactionsToOwner(user.getOwnerKey());
     }
 
     private String normalizeUsername(String username) {

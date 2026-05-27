@@ -1,5 +1,9 @@
 package com.autobookkeeper.api;
 
+import com.autobookkeeper.domain.ProcessingStatus;
+import com.autobookkeeper.domain.Transaction;
+import com.autobookkeeper.domain.TransactionType;
+import com.autobookkeeper.repository.TransactionRepository;
 import com.autobookkeeper.user.AppUser;
 import com.autobookkeeper.user.AppUserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -9,6 +13,10 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.math.BigDecimal;
+import java.time.Instant;
+import java.time.LocalDate;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.http.MediaType.APPLICATION_JSON;
@@ -31,8 +39,12 @@ class AuthControllerTest {
     @Autowired
     private AppUserRepository appUserRepository;
 
+    @Autowired
+    private TransactionRepository transactionRepository;
+
     @BeforeEach
     void cleanDatabase() {
+        transactionRepository.deleteAll();
         appUserRepository.deleteAll();
     }
 
@@ -104,5 +116,66 @@ class AuthControllerTest {
                         .contentType(APPLICATION_JSON)
                         .content("{\"username\":\"friend1\",\"password\":\"wrongpw\"}"))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void migratesLegacyTransactionsToCurrentRegisteredUserWithLegacyToken() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"username\":\"owner\",\"password\":\"secret123\",\"inviteCode\":\"join-test\"}"))
+                .andExpect(status().isOk());
+        AppUser owner = appUserRepository.findByUsername("owner").orElseThrow();
+        transactionRepository.save(new Transaction(
+                LocalDate.of(2026, 5, 1),
+                new BigDecimal("10.00"),
+                "Legacy Null",
+                TransactionType.EXPENSE,
+                "餐饮",
+                "raw",
+                "{}",
+                0.9,
+                ProcessingStatus.PROCESSED,
+                "legacy",
+                Instant.parse("2026-05-01T00:00:00Z")
+        ));
+        Transaction defaultTransaction = new Transaction(
+                LocalDate.of(2026, 5, 2),
+                new BigDecimal("20.00"),
+                "Legacy Default",
+                TransactionType.EXPENSE,
+                "购物",
+                "raw",
+                "{}",
+                0.9,
+                ProcessingStatus.PROCESSED,
+                "legacy",
+                Instant.parse("2026-05-02T00:00:00Z")
+        );
+        defaultTransaction.assignOwner("default");
+        transactionRepository.save(defaultTransaction);
+
+        mockMvc.perform(post("/api/auth/migrate-legacy")
+                        .header("X-API-Token", owner.getApiToken())
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"legacyToken\":\"test-token\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.migratedCount").value(2));
+
+        assertThat(transactionRepository.findAll()).allMatch(transaction -> owner.getOwnerKey().equals(transaction.getOwnerKey()));
+    }
+
+    @Test
+    void rejectsLegacyMigrationWithWrongLegacyToken() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"username\":\"owner\",\"password\":\"secret123\",\"inviteCode\":\"join-test\"}"))
+                .andExpect(status().isOk());
+        AppUser owner = appUserRepository.findByUsername("owner").orElseThrow();
+
+        mockMvc.perform(post("/api/auth/migrate-legacy")
+                        .header("X-API-Token", owner.getApiToken())
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"legacyToken\":\"wrong-token\"}"))
+                .andExpect(status().isForbidden());
     }
 }

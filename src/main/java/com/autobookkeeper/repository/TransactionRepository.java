@@ -4,7 +4,9 @@ import com.autobookkeeper.domain.Transaction;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
 import java.util.List;
@@ -65,4 +67,12 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
               and (transaction.ownerKey = 'default' or transaction.ownerKey is null)
             """)
     boolean existsByIdVisibleToDefaultOwner(Long id);
+
+    @Modifying
+    @Query("""
+            update Transaction transaction
+            set transaction.ownerKey = :ownerKey
+            where transaction.ownerKey = 'default' or transaction.ownerKey is null
+            """)
+    int migrateLegacyTransactionsToOwner(@Param("ownerKey") String ownerKey);
 }
