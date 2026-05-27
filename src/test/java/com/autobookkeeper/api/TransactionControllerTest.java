@@ -2,6 +2,7 @@ package com.autobookkeeper.api;
 
 import com.autobookkeeper.domain.ProcessingStatus;
 import com.autobookkeeper.domain.Transaction;
+import com.autobookkeeper.domain.TransactionType;
 import com.autobookkeeper.repository.TransactionRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -47,6 +48,7 @@ class TransactionControllerTest {
                 LocalDate.of(2026, 5, 26),
                 new BigDecimal("19.90"),
                 "待确认商户",
+                TransactionType.EXPENSE,
                 "待分类",
                 "raw text",
                 "{}",
@@ -64,6 +66,7 @@ class TransactionControllerTest {
                                   "transactionDate": "2026-05-25",
                                   "amount": 18.50,
                                   "merchant": "星巴克",
+                                  "type": "支出",
                                   "category": "餐饮",
                                   "status": "PROCESSED"
                                 }
@@ -72,6 +75,7 @@ class TransactionControllerTest {
                 .andExpect(jsonPath("$.transactionDate").value("2026-05-25"))
                 .andExpect(jsonPath("$.amount").value(18.50))
                 .andExpect(jsonPath("$.merchant").value("星巴克"))
+                .andExpect(jsonPath("$.type").value("支出"))
                 .andExpect(jsonPath("$.category").value("餐饮"))
                 .andExpect(jsonPath("$.status").value("PROCESSED"));
     }
@@ -120,6 +124,7 @@ class TransactionControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.numberOfElements").value(2))
                 .andExpect(jsonPath("$.content[0].merchant").value("地铁"))
+                .andExpect(jsonPath("$.content[0].type").value("支出"))
                 .andExpect(jsonPath("$.content[1].merchant").value("早餐店"));
     }
 
@@ -129,6 +134,7 @@ class TransactionControllerTest {
                 LocalDate.of(2026, 5, 26),
                 new BigDecimal("19.90"),
                 "误识别商户",
+                TransactionType.EXPENSE,
                 "待分类",
                 "raw text",
                 "{}",
@@ -148,11 +154,12 @@ class TransactionControllerTest {
     }
 
     @Test
-    void summarizesMonthlySpendingByCategory() throws Exception {
+    void summarizesMonthlyIncomeExpenseAndBalanceByCategory() throws Exception {
         transactionRepository.save(new Transaction(
                 LocalDate.of(2026, 5, 1),
                 new BigDecimal("10.00"),
                 "早餐店",
+                TransactionType.EXPENSE,
                 "餐饮",
                 "raw text",
                 "{}",
@@ -165,6 +172,7 @@ class TransactionControllerTest {
                 LocalDate.of(2026, 5, 2),
                 new BigDecimal("25.50"),
                 "地铁",
+                TransactionType.EXPENSE,
                 "交通",
                 "raw text",
                 "{}",
@@ -174,9 +182,36 @@ class TransactionControllerTest {
                 Instant.parse("2026-05-02T12:00:00Z")
         ));
         transactionRepository.save(new Transaction(
+                LocalDate.of(2026, 5, 3),
+                new BigDecimal("5000.00"),
+                "公司",
+                TransactionType.INCOME,
+                "工资",
+                "raw text",
+                "{}",
+                0.95,
+                ProcessingStatus.PROCESSED,
+                "ios-shortcuts",
+                Instant.parse("2026-05-03T12:00:00Z")
+        ));
+        transactionRepository.save(new Transaction(
+                LocalDate.of(2026, 5, 4),
+                new BigDecimal("100.00"),
+                "退款",
+                TransactionType.INCOME,
+                "退款",
+                "raw text",
+                "{}",
+                0.95,
+                ProcessingStatus.PROCESSED,
+                "ios-shortcuts",
+                Instant.parse("2026-05-04T12:00:00Z")
+        ));
+        transactionRepository.save(new Transaction(
                 LocalDate.of(2026, 4, 30),
                 new BigDecimal("99.00"),
                 "上月账目",
+                TransactionType.EXPENSE,
                 "购物",
                 "raw text",
                 "{}",
@@ -190,11 +225,17 @@ class TransactionControllerTest {
                         .header("X-API-Token", "test-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.month").value("2026-05"))
-                .andExpect(jsonPath("$.totalAmount").value(35.50))
-                .andExpect(jsonPath("$.categorySummaries[0].category").value("餐饮"))
-                .andExpect(jsonPath("$.categorySummaries[0].amount").value(10.00))
-                .andExpect(jsonPath("$.categorySummaries[1].category").value("交通"))
-                .andExpect(jsonPath("$.categorySummaries[1].amount").value(25.50));
+                .andExpect(jsonPath("$.incomeTotal").value(5100.00))
+                .andExpect(jsonPath("$.expenseTotal").value(35.50))
+                .andExpect(jsonPath("$.balance").value(5064.50))
+                .andExpect(jsonPath("$.incomeCategorySummaries[0].category").value("工资"))
+                .andExpect(jsonPath("$.incomeCategorySummaries[0].amount").value(5000.00))
+                .andExpect(jsonPath("$.incomeCategorySummaries[1].category").value("退款"))
+                .andExpect(jsonPath("$.incomeCategorySummaries[1].amount").value(100.00))
+                .andExpect(jsonPath("$.expenseCategorySummaries[0].category").value("餐饮"))
+                .andExpect(jsonPath("$.expenseCategorySummaries[0].amount").value(10.00))
+                .andExpect(jsonPath("$.expenseCategorySummaries[1].category").value("交通"))
+                .andExpect(jsonPath("$.expenseCategorySummaries[1].amount").value(25.50));
     }
 
     @Test

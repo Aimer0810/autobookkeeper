@@ -5,8 +5,11 @@ import java.util.List;
 
 public record MonthlySummaryResponse(
         String month,
-        BigDecimal totalAmount,
-        List<CategorySummary> categorySummaries
+        BigDecimal incomeTotal,
+        BigDecimal expenseTotal,
+        BigDecimal balance,
+        List<CategorySummary> incomeCategorySummaries,
+        List<CategorySummary> expenseCategorySummaries
 ) {
     public record CategorySummary(String category, BigDecimal amount) {
     }

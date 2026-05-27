@@ -4,6 +4,7 @@ import com.autobookkeeper.api.dto.MonthlySummaryResponse;
 import com.autobookkeeper.api.dto.TransactionResponse;
 import com.autobookkeeper.api.dto.UpdateTransactionRequest;
 import com.autobookkeeper.domain.Transaction;
+import com.autobookkeeper.domain.TransactionType;
 import com.autobookkeeper.repository.TransactionRepository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -64,17 +65,29 @@ public class TransactionController {
                 yearMonth.atDay(1),
                 yearMonth.plusMonths(1).atDay(1)
         );
-        BigDecimal totalAmount = transactions.stream()
+        BigDecimal incomeTotal = transactions.stream()
+                .filter(transaction -> transaction.getType() == TransactionType.INCOME)
                 .map(Transaction::getAmount)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        Map<String, BigDecimal> byCategory = new LinkedHashMap<>();
+        BigDecimal expenseTotal = transactions.stream()
+                .filter(transaction -> transaction.getType() == TransactionType.EXPENSE)
+                .map(Transaction::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        Map<String, BigDecimal> incomeByCategory = new LinkedHashMap<>();
+        Map<String, BigDecimal> expenseByCategory = new LinkedHashMap<>();
         transactions.stream()
                 .sorted(Comparator.comparing(Transaction::getTransactionDate).thenComparing(Transaction::getCreatedAt))
-                .forEach(transaction -> byCategory.merge(transaction.getCategory(), transaction.getAmount(), BigDecimal::add));
-        List<MonthlySummaryResponse.CategorySummary> categorySummaries = byCategory.entrySet().stream()
+                .forEach(transaction -> {
+                    Map<String, BigDecimal> target = transaction.getType() == TransactionType.INCOME ? incomeByCategory : expenseByCategory;
+                    target.merge(transaction.getCategory(), transaction.getAmount(), BigDecimal::add);
+                });
+        List<MonthlySummaryResponse.CategorySummary> incomeCategorySummaries = incomeByCategory.entrySet().stream()
                 .map(entry -> new MonthlySummaryResponse.CategorySummary(entry.getKey(), entry.getValue()))
                 .toList();
-        return new MonthlySummaryResponse(month, totalAmount, categorySummaries);
+        List<MonthlySummaryResponse.CategorySummary> expenseCategorySummaries = expenseByCategory.entrySet().stream()
+                .map(entry -> new MonthlySummaryResponse.CategorySummary(entry.getKey(), entry.getValue()))
+                .toList();
+        return new MonthlySummaryResponse(month, incomeTotal, expenseTotal, incomeTotal.subtract(expenseTotal), incomeCategorySummaries, expenseCategorySummaries);
     }
 
     private YearMonth parseMonth(String month) {
@@ -96,7 +109,7 @@ public class TransactionController {
     public TransactionResponse update(@PathVariable Long id, @RequestBody UpdateTransactionRequest request) {
         return transactionRepository.findById(id)
                 .map(transaction -> {
-                    transaction.update(request.transactionDate(), request.amount(), request.merchant(), request.category(), request.status());
+                    transaction.update(request.transactionDate(), request.amount(), request.merchant(), TransactionType.fromLabel(request.type()), request.category(), request.status());
                     return TransactionResponse.from(transactionRepository.save(transaction));
                 })
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Transaction not found"));

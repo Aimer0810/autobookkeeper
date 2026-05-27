@@ -9,6 +9,7 @@ public record UpdateTransactionRequest(
         LocalDate transactionDate,
         BigDecimal amount,
         String merchant,
+        String type,
         String category,
         ProcessingStatus status
 ) {
