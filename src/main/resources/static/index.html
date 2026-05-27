@@ -32,6 +32,9 @@
         .modal-grid label { font-size: 13px; color: #475569; font-weight: 700; }
         .modal-grid input, .modal-grid select { margin-top: 6px; width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #d7dce8; border-radius: 12px; }
         .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+        .detail-block { margin-top: 12px; }
+        .detail-block h3 { margin: 0 0 6px; font-size: 14px; color: #334155; }
+        .detail-pre { max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-word; background: #0f172a; color: #e2e8f0; border-radius: 12px; padding: 12px; font-size: 12px; line-height: 1.5; }
         @media (max-width: 640px) {
             .row { grid-template-columns: 1fr; }
             .actions { text-align: left; }
@@ -100,6 +103,22 @@
         </div>
     </div>
 </div>
+<div id="detailBackdrop" class="modal-backdrop">
+    <div class="modal">
+        <h2>AI 识别详情</h2>
+        <div class="detail-block">
+            <h3>原始文本</h3>
+            <pre id="detailRawText" class="detail-pre"></pre>
+        </div>
+        <div class="detail-block">
+            <h3>结构化 JSON</h3>
+            <pre id="detailStructuredJson" class="detail-pre"></pre>
+        </div>
+        <div class="modal-actions">
+            <button class="muted" onclick="closeDetails()">关闭</button>
+        </div>
+    </div>
+</div>
 <script>
     const tokenInput = document.getElementById('token');
     tokenInput.value = localStorage.getItem('autobookkeeper-token') || '';
@@ -161,6 +180,7 @@
                     <div class="actions">
                         <div class="amount">¥${item.amount}</div>
                         <button class="muted" onclick="editTransaction(${item.id})">编辑</button>
+                        <button class="muted" onclick="showDetails(${item.id})">详情</button>
                         ${item.status === 'NEEDS_REVIEW' ? `<button class="secondary" onclick="markProcessed(${item.id})">标记已处理</button>` : ''}
                         <button class="danger" onclick="deleteTransaction(${item.id})">删除</button>
                     </div>
@@ -220,6 +240,22 @@
     function closeEditor() {
         editingTransactionId = null;
         document.getElementById('editorBackdrop').style.display = 'none';
+    }
+
+    async function showDetails(id) {
+        try {
+            const token = localStorage.getItem('autobookkeeper-token');
+            const item = await fetchTransaction(id, token);
+            document.getElementById('detailRawText').textContent = item.rawText || '无';
+            document.getElementById('detailStructuredJson').textContent = formatJson(item.structuredJson);
+            document.getElementById('detailBackdrop').style.display = 'flex';
+        } catch (error) {
+            showNotice(error.message);
+        }
+    }
+
+    function closeDetails() {
+        document.getElementById('detailBackdrop').style.display = 'none';
     }
 
     async function saveTransaction() {
@@ -302,6 +338,15 @@
 
     function emptyToNull(value) {
         return value === '' ? null : value;
+    }
+
+    function formatJson(value) {
+        if (!value) return '无';
+        try {
+            return JSON.stringify(JSON.parse(value), null, 2);
+        } catch (error) {
+            return value;
+        }
     }
 
     loadSummary();
