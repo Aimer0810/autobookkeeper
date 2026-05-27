@@ -30,7 +30,7 @@ public class Transaction {
     private String merchant;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = true)
     private TransactionType type = TransactionType.EXPENSE;
 
     @Column(nullable = false)
@@ -92,7 +92,7 @@ public class Transaction {
     }
 
     public TransactionType getType() {
-        return type;
+        return type == null ? TransactionType.EXPENSE : type;
     }
 
     public String getCategory() {

@@ -244,4 +244,28 @@ class TransactionControllerTest {
                         .header("X-API-Token", "test-token"))
                 .andExpect(status().isBadRequest());
     }
+
+    @Test
+    void treatsLegacyTransactionWithoutTypeAsExpense() throws Exception {
+        transactionRepository.save(new Transaction(
+                LocalDate.of(2026, 5, 1),
+                new BigDecimal("12.00"),
+                "旧数据商户",
+                null,
+                "餐饮",
+                "raw text",
+                "{}",
+                0.95,
+                ProcessingStatus.PROCESSED,
+                "ios-shortcuts",
+                Instant.parse("2026-05-01T12:00:00Z")
+        ));
+
+        mockMvc.perform(get("/api/transactions/summary?month=2026-05")
+                        .header("X-API-Token", "test-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.incomeTotal").value(0))
+                .andExpect(jsonPath("$.expenseTotal").value(12.00))
+                .andExpect(jsonPath("$.balance").value(-12.00));
+    }
 }
