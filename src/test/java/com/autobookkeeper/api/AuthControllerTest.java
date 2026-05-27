@@ -29,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @TestPropertySource(properties = {
         "autobookkeeper.api-token=test-token",
         "autobookkeeper.invite-code=join-test",
+        "autobookkeeper.invite-codes=friend-code,family-code",
         "spring.datasource.url=jdbc:h2:mem:auth-controller-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE"
 })
 class AuthControllerTest {
@@ -62,6 +63,16 @@ class AuthControllerTest {
         assertThat(user.getPasswordHash()).startsWith("$2");
         assertThat(user.getOwnerKey()).startsWith("user_");
         assertThat(user.getApiToken()).isNotBlank();
+    }
+
+    @Test
+    void registersUserWithOneOfMultipleInviteCodes() throws Exception {
+        mockMvc.perform(post("/api/auth/register")
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"username\":\"friend2\",\"password\":\"secret123\",\"inviteCode\":\"family-code\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.username").value("friend2"))
+                .andExpect(jsonPath("$.token").isNotEmpty());
     }
 
     @Test

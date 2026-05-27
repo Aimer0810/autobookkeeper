@@ -10,8 +10,10 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Base64;
 import java.util.Locale;
+import java.util.stream.Stream;
 
 @Service
 public class AuthService {
@@ -29,11 +31,10 @@ public class AuthService {
     }
 
     public AppUser register(String username, String password, String inviteCode) {
-        String configuredInviteCode = properties.inviteCode();
-        if (configuredInviteCode == null || configuredInviteCode.isBlank()) {
+        if (!hasConfiguredInviteCodes()) {
             throw new ResponseStatusException(HttpStatus.SERVICE_UNAVAILABLE, "Invite code is not configured");
         }
-        if (!configuredInviteCode.equals(inviteCode)) {
+        if (!isValidInviteCode(inviteCode)) {
             throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Invalid invite code");
         }
         String normalizedUsername = normalizeUsername(username);
@@ -73,6 +74,31 @@ public class AuthService {
 
     private String normalizeUsername(String username) {
         return username.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private boolean hasConfiguredInviteCodes() {
+        return hasText(properties.inviteCode()) || hasText(properties.inviteCodes());
+    }
+
+    private boolean isValidInviteCode(String inviteCode) {
+        if (inviteCode == null || inviteCode.isBlank()) {
+            return false;
+        }
+        return configuredInviteCodes().anyMatch(inviteCode::equals);
+    }
+
+    private Stream<String> configuredInviteCodes() {
+        Stream<String> singleCode = hasText(properties.inviteCode()) ? Stream.of(properties.inviteCode()) : Stream.empty();
+        Stream<String> multipleCodes = hasText(properties.inviteCodes())
+                ? Arrays.stream(properties.inviteCodes().split(","))
+                : Stream.empty();
+        return Stream.concat(singleCode, multipleCodes)
+                .map(String::trim)
+                .filter(this::hasText);
+    }
+
+    private boolean hasText(String value) {
+        return value != null && !value.isBlank();
     }
 
     private String uniqueOwnerKey() {
