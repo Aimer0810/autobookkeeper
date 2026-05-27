@@ -13,6 +13,7 @@
         button { margin-top: 10px; padding: 12px 16px; border: 0; border-radius: 12px; background: #1d4ed8; color: white; font-weight: 700; cursor: pointer; }
         button.secondary { background: #f97316; }
         button.danger { background: #dc2626; margin-left: 6px; }
+        button.muted { background: #64748b; margin-left: 6px; }
         .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border-bottom: 1px solid #edf0f7; padding: 12px 0; }
         .merchant { font-weight: 700; }
         .meta { color: #64748b; font-size: 13px; margin-top: 4px; }
@@ -25,6 +26,17 @@
         .summary-total { font-size: 32px; font-weight: 900; color: #0f766e; margin: 8px 0; }
         .summary-categories { display: flex; flex-wrap: wrap; gap: 8px; }
         .summary-chip { background: #f1f5f9; border-radius: 999px; padding: 6px 10px; color: #334155; font-size: 13px; }
+        .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, .45); display: none; align-items: center; justify-content: center; padding: 18px; }
+        .modal { width: min(520px, 100%); background: white; border-radius: 18px; box-shadow: 0 24px 70px rgba(15, 23, 42, .24); padding: 18px; }
+        .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .modal-grid label { font-size: 13px; color: #475569; font-weight: 700; }
+        .modal-grid input, .modal-grid select { margin-top: 6px; width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #d7dce8; border-radius: 12px; }
+        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
+        @media (max-width: 640px) {
+            .row { grid-template-columns: 1fr; }
+            .actions { text-align: left; }
+            .modal-grid { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
 <body>
@@ -48,9 +60,50 @@
         <div id="transactions">加载中...</div>
     </section>
 </main>
+<div id="editorBackdrop" class="modal-backdrop">
+    <div class="modal">
+        <h2>编辑账目</h2>
+        <div class="modal-grid">
+            <label>日期
+                <input id="editDate" type="date">
+            </label>
+            <label>金额
+                <input id="editAmount" type="number" step="0.01" min="0">
+            </label>
+            <label>商户
+                <input id="editMerchant" type="text">
+            </label>
+            <label>分类
+                <select id="editCategory">
+                    <option value="餐饮">餐饮</option>
+                    <option value="交通">交通</option>
+                    <option value="购物">购物</option>
+                    <option value="住房">住房</option>
+                    <option value="医疗">医疗</option>
+                    <option value="娱乐">娱乐</option>
+                    <option value="转账">转账</option>
+                    <option value="其他">其他</option>
+                    <option value="未分类">未分类</option>
+                </select>
+            </label>
+            <label>状态
+                <select id="editStatus">
+                    <option value="PROCESSED">已处理</option>
+                    <option value="NEEDS_REVIEW">需复核</option>
+                    <option value="FAILED">失败</option>
+                </select>
+            </label>
+        </div>
+        <div class="modal-actions">
+            <button class="muted" onclick="closeEditor()">取消</button>
+            <button onclick="saveTransaction()">保存</button>
+        </div>
+    </div>
+</div>
 <script>
     const tokenInput = document.getElementById('token');
     tokenInput.value = localStorage.getItem('autobookkeeper-token') || '';
+    let editingTransactionId = null;
 
     function saveToken() {
         localStorage.setItem('autobookkeeper-token', tokenInput.value);
@@ -107,6 +160,7 @@
                     </div>
                     <div class="actions">
                         <div class="amount">¥${item.amount}</div>
+                        <button class="muted" onclick="editTransaction(${item.id})">编辑</button>
                         ${item.status === 'NEEDS_REVIEW' ? `<button class="secondary" onclick="markProcessed(${item.id})">标记已处理</button>` : ''}
                         <button class="danger" onclick="deleteTransaction(${item.id})">删除</button>
                     </div>
@@ -140,6 +194,58 @@
                 showNotice(response.status === 401 ? 'Token 无效或未填写。' : '标记失败，请稍后重试。');
                 return;
             }
+            loadSummary();
+            loadTransactions();
+        } catch (error) {
+            showNotice(error.message);
+        }
+    }
+
+    async function editTransaction(id) {
+        try {
+            const token = localStorage.getItem('autobookkeeper-token');
+            const item = await fetchTransaction(id, token);
+            editingTransactionId = id;
+            document.getElementById('editDate').value = item.transactionDate || '';
+            document.getElementById('editAmount').value = item.amount || '';
+            document.getElementById('editMerchant').value = item.merchant || '';
+            document.getElementById('editCategory').value = item.category || '其他';
+            document.getElementById('editStatus').value = item.status || 'NEEDS_REVIEW';
+            document.getElementById('editorBackdrop').style.display = 'flex';
+        } catch (error) {
+            showNotice(error.message);
+        }
+    }
+
+    function closeEditor() {
+        editingTransactionId = null;
+        document.getElementById('editorBackdrop').style.display = 'none';
+    }
+
+    async function saveTransaction() {
+        if (!editingTransactionId) return;
+        const token = localStorage.getItem('autobookkeeper-token');
+        try {
+            const response = await fetch(`/api/transactions/${editingTransactionId}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? {'X-API-Token': token} : {})
+                },
+                body: JSON.stringify({
+                    transactionDate: emptyToNull(document.getElementById('editDate').value),
+                    amount: emptyToNull(document.getElementById('editAmount').value),
+                    merchant: emptyToNull(document.getElementById('editMerchant').value),
+                    category: emptyToNull(document.getElementById('editCategory').value),
+                    status: emptyToNull(document.getElementById('editStatus').value)
+                })
+            });
+            if (!response.ok) {
+                showNotice(response.status === 401 ? 'Token 无效或未填写。' : '保存失败，请检查输入后重试。');
+                return;
+            }
+            closeEditor();
+            hideNotice();
             loadSummary();
             loadTransactions();
         } catch (error) {
@@ -192,6 +298,10 @@
 
     function escapeHtml(value) {
         return String(value || '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
+    }
+
+    function emptyToNull(value) {
+        return value === '' ? null : value;
     }
 
     loadSummary();
