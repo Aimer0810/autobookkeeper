@@ -37,6 +37,56 @@ Invoke-RestMethod http://localhost:8080/api/health
 }
 ```
 
+## 本地 iPhone 联调启动
+
+先打包应用：
+
+```powershell
+mvn package "-DskipTests"
+```
+
+设置本地访问 Token 和 AI Key：
+
+```powershell
+$env:AUTOBOOKKEEPER_API_TOKEN="your-long-random-token"
+$env:VISION_API_KEY="your-dashscope-api-key"
+```
+
+启动本地后端：
+
+```powershell
+.\scripts\start-local.ps1
+```
+
+脚本默认使用阿里云百炼 OpenAI 兼容接口：
+
+```text
+VISION_API_ENDPOINT=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+VISION_MODEL=qwen3.6-flash
+AUTOBOOKKEEPER_AI_TIMEOUT_MS=30000
+```
+
+如需覆盖默认值，可在启动脚本前设置同名环境变量。
+
+检查 AI 配置是否生效：
+
+```powershell
+Invoke-RestMethod http://localhost:8080/api/health | ConvertTo-Json -Depth 5
+```
+
+确认响应中：
+
+```json
+{
+  "ai": {
+    "apiKeyConfigured": true,
+    "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
+    "model": "qwen3.6-flash",
+    "timeoutMs": 30000
+  }
+}
+```
+
 ## 环境变量
 
 ```text
@@ -93,6 +143,21 @@ Render 会为 Web Service 注入 `PORT` 环境变量，应用会通过 `server.p
 
 ## API 示例
 
+iPhone 快捷指令调用 `/api/process` 时，请使用：
+
+```text
+Method: POST
+Content-Type: application/json
+Header: X-API-Token: your-long-random-token
+Body:
+{
+  "imageBase64": "Base64 encoded screenshot",
+  "source": "ios-shortcuts"
+}
+```
+
+后端会兼容 iPhone 快捷指令可能产生的 `data:image/...;base64,` 前缀和换行符。
+
 ```powershell
 $body = @{ imageBase64 = [Convert]::ToBase64String([Text.Encoding]::UTF8.GetBytes('fake-image')); source = 'ios-shortcuts' } | ConvertTo-Json
 Invoke-RestMethod https://your-domain.example/api/process -Method Post -ContentType 'application/json' -Headers @{ 'X-API-Token' = 'your-token' } -Body $body
@@ -108,6 +173,12 @@ Invoke-RestMethod 'https://your-domain.example/api/transactions?page=0&size=20' 
 
 ```powershell
 Invoke-RestMethod 'https://your-domain.example/api/transactions/summary?month=2026-05' -Headers @{ 'X-API-Token' = 'your-token' }
+```
+
+查询单条识别详情：
+
+```powershell
+Invoke-RestMethod 'http://localhost:8080/api/transactions/1' -Headers @{ 'X-API-Token' = 'your-token' } | ConvertTo-Json -Depth 5
 ```
 
 人工复核或修正 AI 识别结果：
