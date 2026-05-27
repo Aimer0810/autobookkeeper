@@ -7,10 +7,14 @@ public record Bill(
         LocalDate date,
         BigDecimal amount,
         String merchant,
+        TransactionType type,
         String category,
         String rawText,
         String structuredJson,
         double confidence,
         boolean needsReview
 ) {
+    public Bill(LocalDate date, BigDecimal amount, String merchant, String category, String rawText, String structuredJson, double confidence, boolean needsReview) {
+        this(date, amount, merchant, TransactionType.inferFromCategory(category), category, rawText, structuredJson, confidence, needsReview);
+    }
 }

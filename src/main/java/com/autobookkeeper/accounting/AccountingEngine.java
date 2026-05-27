@@ -3,6 +3,7 @@ package com.autobookkeeper.accounting;
 import com.autobookkeeper.domain.Bill;
 import com.autobookkeeper.domain.ProcessingStatus;
 import com.autobookkeeper.domain.Transaction;
+import com.autobookkeeper.domain.TransactionType;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -21,6 +22,7 @@ public class AccountingEngine {
 
     public Transaction createTransaction(Bill bill, String source) {
         String category = resolveCategory(bill);
+        TransactionType type = bill.type() == null ? TransactionType.inferFromCategory(category) : bill.type();
         ProcessingStatus status = bill.needsReview() || bill.confidence() < REVIEW_CONFIDENCE_THRESHOLD
                 ? ProcessingStatus.NEEDS_REVIEW
                 : ProcessingStatus.PROCESSED;
@@ -28,6 +30,7 @@ public class AccountingEngine {
                 bill.date() == null ? LocalDate.now() : bill.date(),
                 bill.amount(),
                 blankToDefault(bill.merchant(), "未知商家"),
+                type,
                 category,
                 bill.rawText(),
                 bill.structuredJson(),

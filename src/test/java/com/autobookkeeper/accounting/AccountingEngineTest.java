@@ -3,6 +3,7 @@ package com.autobookkeeper.accounting;
 import com.autobookkeeper.domain.Bill;
 import com.autobookkeeper.domain.ProcessingStatus;
 import com.autobookkeeper.domain.Transaction;
+import com.autobookkeeper.domain.TransactionType;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -46,5 +47,15 @@ class AccountingEngineTest {
 
         assertThat(transaction.getCategory()).isEqualTo("未分类");
         assertThat(transaction.getStatus()).isEqualTo(ProcessingStatus.NEEDS_REVIEW);
+    }
+
+    @Test
+    void createsIncomeTransactionWhenBillTypeIsIncome() {
+        Bill bill = new Bill(LocalDate.of(2026, 5, 25), new BigDecimal("5000.00"), "公司", TransactionType.INCOME, "工资", "raw", "{}", 0.95, false);
+
+        Transaction transaction = engine.createTransaction(bill, "ios-shortcuts");
+
+        assertThat(transaction.getType()).isEqualTo(TransactionType.INCOME);
+        assertThat(transaction.getCategory()).isEqualTo("工资");
     }
 }

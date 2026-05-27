@@ -29,6 +29,10 @@ public class Transaction {
     @Column(nullable = false)
     private String merchant;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private TransactionType type = TransactionType.EXPENSE;
+
     @Column(nullable = false)
     private String category;
 
@@ -54,9 +58,14 @@ public class Transaction {
     }
 
     public Transaction(LocalDate transactionDate, BigDecimal amount, String merchant, String category, String rawText, String structuredJson, double confidence, ProcessingStatus status, String source, Instant createdAt) {
+        this(transactionDate, amount, merchant, TransactionType.inferFromCategory(category), category, rawText, structuredJson, confidence, status, source, createdAt);
+    }
+
+    public Transaction(LocalDate transactionDate, BigDecimal amount, String merchant, TransactionType type, String category, String rawText, String structuredJson, double confidence, ProcessingStatus status, String source, Instant createdAt) {
         this.transactionDate = transactionDate;
         this.amount = amount;
         this.merchant = merchant;
+        this.type = type == null ? TransactionType.EXPENSE : type;
         this.category = category;
         this.rawText = rawText;
         this.structuredJson = structuredJson;
@@ -80,6 +89,10 @@ public class Transaction {
 
     public String getMerchant() {
         return merchant;
+    }
+
+    public TransactionType getType() {
+        return type;
     }
 
     public String getCategory() {
@@ -111,6 +124,10 @@ public class Transaction {
     }
 
     public void update(LocalDate transactionDate, BigDecimal amount, String merchant, String category, ProcessingStatus status) {
+        update(transactionDate, amount, merchant, null, category, status);
+    }
+
+    public void update(LocalDate transactionDate, BigDecimal amount, String merchant, TransactionType type, String category, ProcessingStatus status) {
         if (transactionDate != null) {
             this.transactionDate = transactionDate;
         }
@@ -119,6 +136,9 @@ public class Transaction {
         }
         if (merchant != null && !merchant.isBlank()) {
             this.merchant = merchant;
+        }
+        if (type != null) {
+            this.type = type;
         }
         if (category != null && !category.isBlank()) {
             this.category = category;
