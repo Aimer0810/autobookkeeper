@@ -103,26 +103,18 @@
             <button onclick="registerAccount()">注册并登录</button>
             <p class="auth-switch meta">已有账号？<a onclick="showLogin()">返回登录</a></p>
         </div>
-        <details>
-            <summary class="meta">已有 API Token / 旧版手动输入</summary>
-            <label for="token">API Token</label>
-            <input id="token" type="password" placeholder="输入 X-API-Token 后保存到本浏览器">
-            <button onclick="saveToken()">保存并刷新</button>
-        </details>
+        <input id="token" type="hidden">
     </section>
     <section class="card dashboard">
-        <h2>账号</h2>
+        <h2>账单页面</h2>
         <p id="dashboardAccountStatus" class="meta"></p>
+        <div id="dashboardNotice" class="notice"></div>
         <div class="token-actions">
+            <input id="legacyToken" type="password" placeholder="输入旧版 API Token 后迁移旧数据">
+            <button class="secondary" onclick="migrateLegacyData()">旧数据迁移</button>
             <button class="secondary" onclick="copyToken()">复制快捷指令 Token</button>
             <button class="muted" onclick="logoutAccount()">退出登录</button>
         </div>
-        <details id="migrationPanel">
-            <summary class="meta">把旧数据迁移到当前账号</summary>
-            <label for="legacyToken">旧版 API Token</label>
-            <input id="legacyToken" type="password" placeholder="输入你的旧 token">
-            <button class="secondary" onclick="migrateLegacyData()">迁移旧数据</button>
-        </details>
     </section>
     <section class="card dashboard">
         <h2>月份账目</h2>
@@ -228,14 +220,6 @@
     let editingTransactionId = null;
     let latestTransactions = [];
 
-    function saveToken() {
-        localStorage.setItem('autobookkeeper-token', tokenInput.value);
-        localStorage.setItem('autobookkeeper-username', '手动 Token');
-        updateAccountStatus();
-        hideNotice();
-        refreshVisibility();
-    }
-
     function showRegister() {
         document.getElementById('authTitle').textContent = '注册';
         document.getElementById('loginPanel').style.display = 'none';
@@ -310,7 +294,7 @@
     function updateAccountStatus() {
         const username = localStorage.getItem('autobookkeeper-username');
         const token = localStorage.getItem('autobookkeeper-token');
-        const status = username ? `已登录：${username}` : token ? '已保存 API Token' : '未登录';
+        const status = username && token ? `已登录：${username}` : '未登录';
         document.getElementById('accountStatus').textContent = status;
         document.getElementById('dashboardAccountStatus').textContent = status;
     }
@@ -318,7 +302,7 @@
     async function migrateLegacyData() {
         const token = localStorage.getItem('autobookkeeper-token');
         const legacyToken = document.getElementById('legacyToken').value;
-        if (!token || !localStorage.getItem('autobookkeeper-username') || localStorage.getItem('autobookkeeper-username') === '手动 Token') {
+        if (!token || !localStorage.getItem('autobookkeeper-username')) {
             showNotice('请先用新账号登录，再迁移旧数据。');
             return;
         }
@@ -614,15 +598,19 @@
     }
 
     function showNotice(message) {
-        const notice = document.getElementById('notice');
-        notice.textContent = message;
-        notice.style.display = 'block';
+        ['notice', 'dashboardNotice'].forEach(id => {
+            const notice = document.getElementById(id);
+            notice.textContent = message;
+            notice.style.display = 'block';
+        });
     }
 
     function hideNotice() {
-        const notice = document.getElementById('notice');
-        notice.textContent = '';
-        notice.style.display = 'none';
+        ['notice', 'dashboardNotice'].forEach(id => {
+            const notice = document.getElementById(id);
+            notice.textContent = '';
+            notice.style.display = 'none';
+        });
     }
 
     function escapeHtml(value) {
