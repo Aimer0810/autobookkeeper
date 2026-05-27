@@ -61,7 +61,7 @@ class CloudVisionServiceImplTest {
             Bill bill = service.extractBillFromImage("image-bytes".getBytes());
 
             assertThat(requestBody.get()).contains("data:image/png;base64");
-            assertThat(requestBody.get()).contains("请从这张支付截图中提取账单信息");
+            assertThat(requestBody.get()).contains("提取支付截图账单");
             assertThat(bill.amount()).isEqualByComparingTo(new BigDecimal("12.80"));
             assertThat(bill.merchant()).isEqualTo("麦当劳");
             assertThat(bill.category()).isEqualTo("餐饮");
@@ -82,6 +82,7 @@ class CloudVisionServiceImplTest {
         String requestBody = service.buildVisionRequest("image-bytes".getBytes());
 
         assertThat(requestBody).contains("\"model\":\"qwen3.6-flash\"");
+        assertThat(requestBody).contains("\"max_tokens\":220");
     }
 
     @Test
@@ -94,10 +95,10 @@ class CloudVisionServiceImplTest {
 
         String requestBody = service.buildVisionRequest("image-bytes".getBytes());
 
-        assertThat(requestBody).contains("拼音、英文、昵称或账号名称，也要原样作为 merchant 返回");
-        assertThat(requestBody).contains("例如 ru zi ni sa，也要原样填入 merchant");
+        assertThat(requestBody).contains("拼音、英文、昵称原样返回");
+        assertThat(requestBody).contains("如 ru zi ni sa，原样填入 merchant");
         assertThat(requestBody).contains("未知商家");
-        assertThat(requestBody).contains("confidence 不要高于 0.74");
+        assertThat(requestBody).contains("confidence<=0.74");
         assertThat(requestBody).contains("餐饮、交通、购物、住房、医疗、娱乐、生活缴费、转账、收入、其他、未分类");
     }
 

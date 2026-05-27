@@ -86,21 +86,21 @@ public class CloudVisionServiceImpl implements AIService {
     String buildVisionRequest(byte[] imageData) {
         ObjectNode root = objectMapper.createObjectNode();
         root.put("model", model());
-        root.put("max_tokens", 500);
+        root.put("max_tokens", 220);
         ObjectNode responseFormat = root.putObject("response_format");
         responseFormat.put("type", "json_object");
 
         ArrayNode messages = root.putArray("messages");
         ObjectNode system = messages.addObject();
         system.put("role", "system");
-        system.put("content", "你是严谨的个人记账票据识别助手，只返回 JSON，不要返回 Markdown。字段必须包含 date, amount, merchant, category, confidence, rawText。merchant 优先读取截图中的收款方、商户、对方账户、商品说明或转账备注；如果截图中只有拼音、英文、昵称或账号名称，也要原样作为 merchant 返回；确实看不清时才返回未知商家。category 只能从餐饮、交通、购物、住房、医疗、娱乐、生活缴费、转账、收入、其他、未分类中选择。金额、商户、日期任一字段不确定时，confidence 不要高于 0.74。");
+        system.put("content", "只返回 JSON，不要 Markdown。字段：date, amount, merchant, category, confidence, rawText。merchant 取收款方/商户/对方账户/商品说明/备注；拼音、英文、昵称原样返回，确实看不清才用未知商家。category 限：餐饮、交通、购物、住房、医疗、娱乐、生活缴费、转账、收入、其他、未分类。金额/商户/日期不确定时 confidence<=0.74。");
 
         ObjectNode user = messages.addObject();
         user.put("role", "user");
         ArrayNode content = user.putArray("content");
         ObjectNode text = content.addObject();
         text.put("type", "text");
-        text.put("text", "请从这张支付截图中提取账单信息。日期使用 YYYY-MM-DD，金额只返回数字字符串。优先读取支付详情页中的收款方、商户、对方账户、商品说明、转账备注等文字；如果收款方显示为拼音、英文或昵称，例如 ru zi ni sa，也要原样填入 merchant。无法确定商户时返回未知商家，并降低 confidence。");
+        text.put("text", "提取支付截图账单。日期 YYYY-MM-DD；金额只返回数字。若收款方是拼音/英文/昵称，如 ru zi ni sa，原样填入 merchant。");
         ObjectNode image = content.addObject();
         image.put("type", "image_url");
         ObjectNode imageUrl = image.putObject("image_url");
