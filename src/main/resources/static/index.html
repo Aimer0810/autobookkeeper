@@ -60,6 +60,12 @@
         .dashboard { display: none; }
         .auth-switch { margin-top: 12px; }
         .auth-switch a { color: #1d4ed8; cursor: pointer; font-weight: 700; }
+        .dashboard-hero { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: start; }
+        .dashboard-hero h2 { margin: 0; font-size: 28px; }
+        .dashboard-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+        .migration-box { margin-top: 16px; border: 1px solid #fed7aa; background: #fff7ed; border-radius: 16px; padding: 14px; }
+        .migration-box h3 { margin: 0 0 8px; color: #9a3412; }
+        .migration-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
         @media (max-width: 640px) {
             .row { grid-template-columns: 1fr; }
             .actions { text-align: left; }
@@ -67,6 +73,9 @@
             .filter-grid { grid-template-columns: 1fr; }
             .summary-grid { grid-template-columns: 1fr; }
             .auth-grid { grid-template-columns: 1fr; }
+            .dashboard-hero { grid-template-columns: 1fr; }
+            .dashboard-actions { justify-content: flex-start; }
+            .migration-row { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -106,14 +115,24 @@
         <input id="token" type="hidden">
     </section>
     <section class="card dashboard">
-        <h2>账单页面</h2>
-        <p id="dashboardAccountStatus" class="meta"></p>
+        <div class="dashboard-hero">
+            <div>
+                <h2>账目看板</h2>
+                <p id="dashboardAccountStatus" class="meta"></p>
+            </div>
+            <div class="dashboard-actions">
+                <button class="secondary" onclick="copyToken()">复制快捷指令 Token</button>
+                <button class="muted" onclick="logoutAccount()">退出登录</button>
+            </div>
+        </div>
         <div id="dashboardNotice" class="notice"></div>
-        <div class="token-actions">
-            <input id="legacyToken" type="password" placeholder="输入旧版 API Token 后迁移旧数据">
-            <button class="secondary" onclick="migrateLegacyData()">旧数据迁移</button>
-            <button class="secondary" onclick="copyToken()">复制快捷指令 Token</button>
-            <button class="muted" onclick="logoutAccount()">退出登录</button>
+        <div class="migration-box">
+            <h3>旧数据迁移</h3>
+            <p class="meta">如果你之前已有旧账单，在这里输入旧版 API Token，把旧账单绑定到当前账号。</p>
+            <div class="migration-row">
+                <input id="legacyToken" type="password" placeholder="输入旧版 API Token">
+                <button class="secondary" onclick="migrateLegacyData()">迁移旧数据</button>
+            </div>
         </div>
     </section>
     <section class="card dashboard">
