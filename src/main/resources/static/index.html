@@ -79,7 +79,9 @@
                     <option value="住房">住房</option>
                     <option value="医疗">医疗</option>
                     <option value="娱乐">娱乐</option>
+                    <option value="生活缴费">生活缴费</option>
                     <option value="转账">转账</option>
+                    <option value="收入">收入</option>
                     <option value="其他">其他</option>
                     <option value="未分类">未分类</option>
                 </select>
@@ -120,7 +122,9 @@
                     <option value="住房">住房</option>
                     <option value="医疗">医疗</option>
                     <option value="娱乐">娱乐</option>
+                    <option value="生活缴费">生活缴费</option>
                     <option value="转账">转账</option>
+                    <option value="收入">收入</option>
                     <option value="其他">其他</option>
                     <option value="未分类">未分类</option>
                 </select>
@@ -439,7 +443,7 @@
     }
 
     function categoryOptions(selected) {
-        return ['餐饮', '交通', '购物', '住房', '医疗', '娱乐', '转账', '其他', '未分类']
+        return ['餐饮', '交通', '购物', '住房', '医疗', '娱乐', '生活缴费', '转账', '收入', '其他', '未分类']
                 .map(category => `<option value="${category}" ${category === selected ? 'selected' : ''}>${category}</option>`)
                 .join('');
     }

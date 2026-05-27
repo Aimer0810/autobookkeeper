@@ -92,8 +92,9 @@ Invoke-RestMethod http://localhost:8080/api/health | ConvertTo-Json -Depth 5
 ```text
 AUTOBOOKKEEPER_API_TOKEN=your-long-random-token
 VISION_API_KEY={{API_KEY}}
-VISION_API_ENDPOINT=https://api.openai.com/v1/chat/completions
-VISION_MODEL=gpt-4o-mini
+VISION_API_ENDPOINT=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+VISION_MODEL=qwen3.6-flash
+AUTOBOOKKEEPER_AI_TIMEOUT_MS=30000
 SPRING_PROFILES_ACTIVE=cloud
 DATABASE_URL=jdbc:postgresql://host:5432/autobookkeeper
 DATABASE_USERNAME=postgres

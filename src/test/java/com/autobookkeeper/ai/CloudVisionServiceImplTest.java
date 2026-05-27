@@ -97,7 +97,7 @@ class CloudVisionServiceImplTest {
         assertThat(requestBody).contains("不要拼音化");
         assertThat(requestBody).contains("未知商家");
         assertThat(requestBody).contains("confidence 不要高于 0.74");
-        assertThat(requestBody).contains("餐饮、交通、购物、住房、医疗、娱乐、转账、其他");
+        assertThat(requestBody).contains("餐饮、交通、购物、住房、医疗、娱乐、生活缴费、转账、收入、其他、未分类");
     }
 
     @Test

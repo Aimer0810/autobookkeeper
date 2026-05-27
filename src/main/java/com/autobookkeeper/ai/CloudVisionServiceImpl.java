@@ -93,7 +93,7 @@ public class CloudVisionServiceImpl implements AIService {
         ArrayNode messages = root.putArray("messages");
         ObjectNode system = messages.addObject();
         system.put("role", "system");
-        system.put("content", "你是严谨的个人记账票据识别助手，只返回 JSON，不要返回 Markdown。字段必须包含 date, amount, merchant, category, confidence, rawText。merchant 优先保留截图中的中文商户名，不要翻译，不要拼音化；看不清时返回未知商家。category 只能从餐饮、交通、购物、住房、医疗、娱乐、转账、其他中选择。金额、商户、日期任一字段不确定时，confidence 不要高于 0.74。");
+        system.put("content", "你是严谨的个人记账票据识别助手，只返回 JSON，不要返回 Markdown。字段必须包含 date, amount, merchant, category, confidence, rawText。merchant 优先保留截图中的中文商户名，不要翻译，不要拼音化；看不清时返回未知商家。category 只能从餐饮、交通、购物、住房、医疗、娱乐、生活缴费、转账、收入、其他、未分类中选择。金额、商户、日期任一字段不确定时，confidence 不要高于 0.74。");
 
         ObjectNode user = messages.addObject();
         user.put("role", "user");
@@ -157,17 +157,17 @@ public class CloudVisionServiceImpl implements AIService {
 
     private static String configuredEndpoint(AutoBookkeeperProperties properties) {
         return properties.ai() == null || properties.ai().endpoint() == null || properties.ai().endpoint().isBlank()
-                ? "https://api.openai.com/v1/chat/completions"
+                ? "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
                 : properties.ai().endpoint();
     }
 
     private static int configuredTimeoutMs(AutoBookkeeperProperties properties) {
-        return properties.ai() == null || properties.ai().timeoutMs() <= 0 ? 2500 : properties.ai().timeoutMs();
+        return properties.ai() == null || properties.ai().timeoutMs() <= 0 ? 30000 : properties.ai().timeoutMs();
     }
 
     private static String configuredModel(AutoBookkeeperProperties properties) {
         return properties.ai() == null || properties.ai().model() == null || properties.ai().model().isBlank()
-                ? "gpt-4o-mini"
+                ? "qwen3.6-flash"
                 : properties.ai().model();
     }
 

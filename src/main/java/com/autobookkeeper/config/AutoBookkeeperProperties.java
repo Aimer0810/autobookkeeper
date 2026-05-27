@@ -10,11 +10,11 @@ public record AutoBookkeeperProperties(
 ) {
     public record Ai(String provider, String apiKey, int timeoutMs, String endpoint, String model) {
         public Ai(String provider, String apiKey, int timeoutMs) {
-            this(provider, apiKey, timeoutMs, "https://api.openai.com/v1/chat/completions", "gpt-4o-mini");
+            this(provider, apiKey, timeoutMs, "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", "qwen3.6-flash");
         }
 
         public Ai(String provider, String apiKey, int timeoutMs, String endpoint) {
-            this(provider, apiKey, timeoutMs, endpoint, "gpt-4o-mini");
+            this(provider, apiKey, timeoutMs, endpoint, "qwen3.6-flash");
         }
     }
 

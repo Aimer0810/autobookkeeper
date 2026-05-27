@@ -16,10 +16,17 @@ public class HealthController {
 
     private final Environment environment;
     private final String version;
+    private final String commit;
+    private final String buildTime;
 
-    public HealthController(Environment environment, @Value("${autobookkeeper.version:0.1.0}") String version) {
+    public HealthController(Environment environment,
+                            @Value("${autobookkeeper.version:0.1.0}") String version,
+                            @Value("${autobookkeeper.build.commit:${GIT_COMMIT:unknown}}") String commit,
+                            @Value("${autobookkeeper.build.time:${BUILD_TIME:unknown}}") String buildTime) {
         this.environment = environment;
         this.version = version;
+        this.commit = commit;
+        this.buildTime = buildTime;
     }
 
     @GetMapping("/health")
@@ -28,6 +35,8 @@ public class HealthController {
         return Map.of(
                 "status", "UP",
                 "version", version,
+                "commit", commit,
+                "buildTime", buildTime,
                 "profiles", profiles,
                 "ai", aiHealth()
         );
