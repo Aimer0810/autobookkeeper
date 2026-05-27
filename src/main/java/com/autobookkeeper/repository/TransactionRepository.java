@@ -12,5 +12,7 @@ public interface TransactionRepository extends JpaRepository<Transaction, Long> 
 
     Page<Transaction> findAllByOrderByTransactionDateDescCreatedAtDesc(Pageable pageable);
 
+    Page<Transaction> findAllByTransactionDateGreaterThanEqualAndTransactionDateLessThanOrderByTransactionDateDescCreatedAtDesc(LocalDate startDate, LocalDate endDate, Pageable pageable);
+
     List<Transaction> findAllByTransactionDateGreaterThanEqualAndTransactionDateLessThan(LocalDate startDate, LocalDate endDate);
 }

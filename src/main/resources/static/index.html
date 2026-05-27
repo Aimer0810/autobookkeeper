@@ -9,7 +9,7 @@
         header { padding: 24px 18px; background: linear-gradient(135deg, #1d4ed8, #06b6d4); color: white; }
         main { max-width: 960px; margin: 0 auto; padding: 18px; }
         .card { background: white; border-radius: 18px; box-shadow: 0 10px 30px rgba(15, 23, 42, .08); padding: 18px; margin-bottom: 16px; }
-        input { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #d7dce8; border-radius: 12px; }
+        input, select { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #d7dce8; border-radius: 12px; }
         button { margin-top: 10px; padding: 12px 16px; border: 0; border-radius: 12px; background: #1d4ed8; color: white; font-weight: 700; cursor: pointer; }
         button.secondary { background: #f97316; }
         button.danger { background: #dc2626; margin-left: 6px; }
@@ -26,6 +26,10 @@
         .toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 10px; }
         .toolbar label { display: inline-flex; gap: 6px; align-items: center; color: #475569; font-size: 14px; font-weight: 700; }
         .toolbar input { width: auto; }
+        .filter-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+        .filter-grid label { font-size: 13px; color: #475569; font-weight: 700; }
+        .filter-grid input, .filter-grid select { margin-top: 6px; }
+        .quick-category { width: 120px; padding: 8px; margin: 0 0 8px 6px; }
         .summary-total { font-size: 32px; font-weight: 900; color: #0f766e; margin: 8px 0; }
         .summary-categories { display: flex; flex-wrap: wrap; gap: 8px; }
         .summary-chip { background: #f1f5f9; border-radius: 999px; padding: 6px 10px; color: #334155; font-size: 13px; }
@@ -42,6 +46,7 @@
             .row { grid-template-columns: 1fr; }
             .actions { text-align: left; }
             .modal-grid { grid-template-columns: 1fr; }
+            .filter-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -57,7 +62,29 @@
         <button onclick="saveToken()">保存并刷新</button>
     </section>
     <section class="card">
-        <h2>本月支出</h2>
+        <h2>月份账目</h2>
+        <div class="filter-grid">
+            <label>月份
+                <input id="monthFilter" type="month" onchange="loadDashboard()">
+            </label>
+            <label>搜索商户
+                <input id="merchantSearch" type="search" placeholder="输入商户关键字" oninput="renderTransactions()">
+            </label>
+            <label>分类筛选
+                <select id="categoryFilter" onchange="renderTransactions()">
+                    <option value="">全部分类</option>
+                    <option value="餐饮">餐饮</option>
+                    <option value="交通">交通</option>
+                    <option value="购物">购物</option>
+                    <option value="住房">住房</option>
+                    <option value="医疗">医疗</option>
+                    <option value="娱乐">娱乐</option>
+                    <option value="转账">转账</option>
+                    <option value="其他">其他</option>
+                    <option value="未分类">未分类</option>
+                </select>
+            </label>
+        </div>
         <div id="summary">加载中...</div>
     </section>
     <section class="card">
@@ -131,11 +158,16 @@
 <script>
     const tokenInput = document.getElementById('token');
     tokenInput.value = localStorage.getItem('autobookkeeper-token') || '';
+    document.getElementById('monthFilter').value = currentMonth();
     let editingTransactionId = null;
     let latestTransactions = [];
 
     function saveToken() {
         localStorage.setItem('autobookkeeper-token', tokenInput.value);
+        loadDashboard();
+    }
+
+    function loadDashboard() {
         loadSummary();
         loadTransactions();
     }
@@ -145,13 +177,17 @@
         return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
     }
 
+    function selectedMonth() {
+        return document.getElementById('monthFilter').value || currentMonth();
+    }
+
     async function loadSummary() {
         const headers = {};
         const token = localStorage.getItem('autobookkeeper-token');
         if (token) headers['X-API-Token'] = token;
         const container = document.getElementById('summary');
         try {
-            const response = await fetch(`/api/transactions/summary?month=${currentMonth()}`, { headers });
+            const response = await fetch(`/api/transactions/summary?month=${selectedMonth()}`, { headers });
             if (!response.ok) throw new Error(response.status === 401 ? 'Token 无效或未填写。' : '加载汇总失败。');
             const data = await response.json();
             const chips = (data.categorySummaries || []).map(item => `<span class="summary-chip">${escapeHtml(item.category)} ¥${item.amount}</span>`).join('');
@@ -173,7 +209,7 @@
         const container = document.getElementById('transactions');
         hideNotice();
         try {
-            const response = await fetch('/api/transactions?page=0&size=50', { headers });
+            const response = await fetch(`/api/transactions?month=${selectedMonth()}&page=0&size=100`, { headers });
             if (!response.ok) throw new Error(response.status === 401 ? 'Token 无效或未填写。' : '加载账目失败。');
             const data = await response.json();
             latestTransactions = data.content || [];
@@ -187,7 +223,14 @@
     function renderTransactions() {
         const container = document.getElementById('transactions');
         const reviewOnly = document.getElementById('reviewOnly').checked;
-        const rows = reviewOnly ? latestTransactions.filter(item => item.status === 'NEEDS_REVIEW') : latestTransactions;
+        const merchantQuery = document.getElementById('merchantSearch').value.trim().toLowerCase();
+        const category = document.getElementById('categoryFilter').value;
+        const rows = latestTransactions.filter(item => {
+            if (reviewOnly && item.status !== 'NEEDS_REVIEW') return false;
+            if (category && item.category !== category) return false;
+            if (merchantQuery && !String(item.merchant || '').toLowerCase().includes(merchantQuery)) return false;
+            return true;
+        });
         if (rows.length === 0) {
             container.innerHTML = reviewOnly ? '<p class="meta">暂无需复核账目。</p>' : '<p class="meta">暂无账目。请先通过 iPhone 快捷指令上传截图。</p>';
             return;
@@ -200,6 +243,9 @@
                     </div>
                     <div class="actions">
                         <div class="amount">¥${item.amount}</div>
+                        <select class="quick-category" onchange="quickUpdateCategory(${item.id}, this.value)">
+                            ${categoryOptions(item.category)}
+                        </select>
                         <button class="muted" onclick="editTransaction(${item.id})">编辑</button>
                         <button class="muted" onclick="showDetails(${item.id})">详情</button>
                         ${item.status === 'NEEDS_REVIEW' ? `<button class="secondary" onclick="markProcessed(${item.id})">标记已处理</button>` : ''}
@@ -231,8 +277,36 @@
                 showNotice(response.status === 401 ? 'Token 无效或未填写。' : '标记失败，请稍后重试。');
                 return;
             }
-            loadSummary();
-            loadTransactions();
+            loadDashboard();
+        } catch (error) {
+            showNotice(error.message);
+        }
+    }
+
+    async function quickUpdateCategory(id, category) {
+        try {
+            const token = localStorage.getItem('autobookkeeper-token');
+            const item = await fetchTransaction(id, token);
+            const response = await fetch(`/api/transactions/${id}`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    ...(token ? {'X-API-Token': token} : {})
+                },
+                body: JSON.stringify({
+                    transactionDate: item.transactionDate,
+                    amount: item.amount,
+                    merchant: item.merchant,
+                    category,
+                    status: item.status
+                })
+            });
+            if (!response.ok) {
+                showNotice(response.status === 401 ? 'Token 无效或未填写。' : '分类保存失败，请稍后重试。');
+                return;
+            }
+            hideNotice();
+            loadDashboard();
         } catch (error) {
             showNotice(error.message);
         }
@@ -299,8 +373,7 @@
             }
             closeEditor();
             hideNotice();
-            loadSummary();
-            loadTransactions();
+            loadDashboard();
         } catch (error) {
             showNotice(error.message);
         }
@@ -317,8 +390,7 @@
             showNotice(response.status === 401 ? 'Token 无效或未填写。' : '删除失败，请稍后重试。');
             return;
         }
-        loadSummary();
-        loadTransactions();
+        loadDashboard();
     }
 
     async function fetchTransaction(id, token) {
@@ -366,8 +438,13 @@
         }
     }
 
-    loadSummary();
-    loadTransactions();
+    function categoryOptions(selected) {
+        return ['餐饮', '交通', '购物', '住房', '医疗', '娱乐', '转账', '其他', '未分类']
+                .map(category => `<option value="${category}" ${category === selected ? 'selected' : ''}>${category}</option>`)
+                .join('');
+    }
+
+    loadDashboard();
 </script>
 </body>
 </html>

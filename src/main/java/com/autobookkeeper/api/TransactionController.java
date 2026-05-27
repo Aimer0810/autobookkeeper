@@ -40,19 +40,26 @@ public class TransactionController {
     }
 
     @GetMapping
-    public Page<TransactionResponse> list(@RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "20") int size) {
-        return transactionRepository.findAllByOrderByTransactionDateDescCreatedAtDesc(PageRequest.of(page, Math.min(size, 100)))
+    public Page<TransactionResponse> list(@RequestParam(defaultValue = "0") int page,
+                                          @RequestParam(defaultValue = "20") int size,
+                                          @RequestParam(required = false) String month) {
+        PageRequest pageRequest = PageRequest.of(page, Math.min(size, 100));
+        if (month != null && !month.isBlank()) {
+            YearMonth yearMonth = parseMonth(month);
+            return transactionRepository.findAllByTransactionDateGreaterThanEqualAndTransactionDateLessThanOrderByTransactionDateDescCreatedAtDesc(
+                            yearMonth.atDay(1),
+                            yearMonth.plusMonths(1).atDay(1),
+                            pageRequest
+                    )
+                    .map(TransactionResponse::from);
+        }
+        return transactionRepository.findAllByOrderByTransactionDateDescCreatedAtDesc(pageRequest)
                 .map(TransactionResponse::from);
     }
 
     @GetMapping("/summary")
     public MonthlySummaryResponse summary(@RequestParam String month) {
-        YearMonth yearMonth;
-        try {
-            yearMonth = YearMonth.parse(month);
-        } catch (DateTimeParseException exception) {
-            throw new ResponseStatusException(BAD_REQUEST, "month must use yyyy-MM format");
-        }
+        YearMonth yearMonth = parseMonth(month);
         List<Transaction> transactions = transactionRepository.findAllByTransactionDateGreaterThanEqualAndTransactionDateLessThan(
                 yearMonth.atDay(1),
                 yearMonth.plusMonths(1).atDay(1)
@@ -68,6 +75,14 @@ public class TransactionController {
                 .map(entry -> new MonthlySummaryResponse.CategorySummary(entry.getKey(), entry.getValue()))
                 .toList();
         return new MonthlySummaryResponse(month, totalAmount, categorySummaries);
+    }
+
+    private YearMonth parseMonth(String month) {
+        try {
+            return YearMonth.parse(month);
+        } catch (DateTimeParseException exception) {
+            throw new ResponseStatusException(BAD_REQUEST, "month must use yyyy-MM format");
+        }
     }
 
     @GetMapping("/{id}")

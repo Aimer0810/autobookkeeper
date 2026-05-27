@@ -77,6 +77,53 @@ class TransactionControllerTest {
     }
 
     @Test
+    void listsTransactionsForSelectedMonth() throws Exception {
+        transactionRepository.save(new Transaction(
+                LocalDate.of(2026, 5, 1),
+                new BigDecimal("10.00"),
+                "早餐店",
+                "餐饮",
+                "raw text",
+                "{}",
+                0.95,
+                ProcessingStatus.PROCESSED,
+                "ios-shortcuts",
+                Instant.parse("2026-05-01T12:00:00Z")
+        ));
+        transactionRepository.save(new Transaction(
+                LocalDate.of(2026, 5, 20),
+                new BigDecimal("25.50"),
+                "地铁",
+                "交通",
+                "raw text",
+                "{}",
+                0.95,
+                ProcessingStatus.PROCESSED,
+                "ios-shortcuts",
+                Instant.parse("2026-05-20T12:00:00Z")
+        ));
+        transactionRepository.save(new Transaction(
+                LocalDate.of(2026, 4, 30),
+                new BigDecimal("99.00"),
+                "上月账目",
+                "购物",
+                "raw text",
+                "{}",
+                0.95,
+                ProcessingStatus.PROCESSED,
+                "ios-shortcuts",
+                Instant.parse("2026-04-30T12:00:00Z")
+        ));
+
+        mockMvc.perform(get("/api/transactions?month=2026-05&page=0&size=10")
+                        .header("X-API-Token", "test-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.numberOfElements").value(2))
+                .andExpect(jsonPath("$.content[0].merchant").value("地铁"))
+                .andExpect(jsonPath("$.content[1].merchant").value("早餐店"));
+    }
+
+    @Test
     void deletesTransaction() throws Exception {
         Transaction transaction = transactionRepository.save(new Transaction(
                 LocalDate.of(2026, 5, 26),
