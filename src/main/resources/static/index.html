@@ -300,6 +300,15 @@
         refreshVisibility();
     }
 
+    function resetInvalidSession() {
+        localStorage.removeItem('autobookkeeper-token');
+        localStorage.removeItem('autobookkeeper-username');
+        tokenInput.value = '';
+        latestTransactions = [];
+        updateAccountStatus();
+        refreshVisibility();
+    }
+
     async function copyToken() {
         const token = localStorage.getItem('autobookkeeper-token');
         if (!token) {
@@ -346,7 +355,7 @@
         const authenticated = Boolean(token && username);
         document.getElementById('authCard').style.display = authenticated ? 'none' : '';
         document.querySelectorAll('.dashboard').forEach(element => {
-            element.style.display = authenticated ? '' : 'none';
+            element.style.display = authenticated ? 'block' : 'none';
         });
         if (authenticated) {
             loadDashboard();
@@ -374,7 +383,11 @@
         const container = document.getElementById('summary');
         try {
             const response = await fetch(`/api/transactions/summary?month=${selectedMonth()}`, { headers });
-            if (!response.ok) throw new Error(response.status === 401 ? 'Token 无效或未填写。' : '加载汇总失败。');
+            if (response.status === 401) {
+                resetInvalidSession();
+                throw new Error('登录已失效，请重新登录。');
+            }
+            if (!response.ok) throw new Error('加载汇总失败。');
             const data = await response.json();
             const expenseChips = (data.expenseCategorySummaries || []).map(item => `<span class="summary-chip">支出 · ${escapeHtml(item.category)} ¥${item.amount}</span>`).join('');
             const incomeChips = (data.incomeCategorySummaries || []).map(item => `<span class="summary-chip">收入 · ${escapeHtml(item.category)} ¥${item.amount}</span>`).join('');
@@ -402,7 +415,11 @@
         hideNotice();
         try {
             const response = await fetch(`/api/transactions?month=${selectedMonth()}&page=0&size=100`, { headers });
-            if (!response.ok) throw new Error(response.status === 401 ? 'Token 无效或未填写。' : '加载账目失败。');
+            if (response.status === 401) {
+                resetInvalidSession();
+                throw new Error('登录已失效，请重新登录。');
+            }
+            if (!response.ok) throw new Error('加载账目失败。');
             const data = await response.json();
             latestTransactions = data.content || [];
             renderTransactions();
