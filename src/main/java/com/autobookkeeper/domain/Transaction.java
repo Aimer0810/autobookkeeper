@@ -51,6 +51,9 @@ public class Transaction {
     @Column(nullable = false)
     private String source;
 
+    @Column(nullable = true)
+    private String ownerKey;
+
     @Column(nullable = false)
     private Instant createdAt;
 
@@ -72,6 +75,7 @@ public class Transaction {
         this.confidence = confidence;
         this.status = status;
         this.source = source;
+        this.ownerKey = "default";
         this.createdAt = createdAt;
     }
 
@@ -119,8 +123,16 @@ public class Transaction {
         return source;
     }
 
+    public String getOwnerKey() {
+        return ownerKey == null || ownerKey.isBlank() ? "default" : ownerKey;
+    }
+
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public void assignOwner(String ownerKey) {
+        this.ownerKey = ownerKey == null || ownerKey.isBlank() ? "default" : ownerKey;
     }
 
     public void update(LocalDate transactionDate, BigDecimal amount, String merchant, String category, ProcessingStatus status) {

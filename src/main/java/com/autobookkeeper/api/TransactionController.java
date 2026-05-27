@@ -6,6 +6,9 @@ import com.autobookkeeper.api.dto.UpdateTransactionRequest;
 import com.autobookkeeper.domain.Transaction;
 import com.autobookkeeper.domain.TransactionType;
 import com.autobookkeeper.repository.TransactionRepository;
+import com.autobookkeeper.security.ApiTokenFilter;
+import com.autobookkeeper.security.AuthenticatedUser;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.http.ResponseEntity;
@@ -43,25 +46,29 @@ public class TransactionController {
     @GetMapping
     public Page<TransactionResponse> list(@RequestParam(defaultValue = "0") int page,
                                           @RequestParam(defaultValue = "20") int size,
-                                          @RequestParam(required = false) String month) {
+                                          @RequestParam(required = false) String month,
+                                          HttpServletRequest request) {
         PageRequest pageRequest = PageRequest.of(page, Math.min(size, 100));
+        String ownerKey = authenticatedUser(request).ownerKey();
         if (month != null && !month.isBlank()) {
             YearMonth yearMonth = parseMonth(month);
-            return transactionRepository.findAllByTransactionDateGreaterThanEqualAndTransactionDateLessThanOrderByTransactionDateDescCreatedAtDesc(
+            return transactionRepository.findAllByOwnerKeyAndTransactionDateGreaterThanEqualAndTransactionDateLessThanOrderByTransactionDateDescCreatedAtDesc(
+                            ownerKey,
                             yearMonth.atDay(1),
                             yearMonth.plusMonths(1).atDay(1),
                             pageRequest
                     )
                     .map(TransactionResponse::from);
         }
-        return transactionRepository.findAllByOrderByTransactionDateDescCreatedAtDesc(pageRequest)
+        return transactionRepository.findAllByOwnerKeyOrderByTransactionDateDescCreatedAtDesc(ownerKey, pageRequest)
                 .map(TransactionResponse::from);
     }
 
     @GetMapping("/summary")
-    public MonthlySummaryResponse summary(@RequestParam String month) {
+    public MonthlySummaryResponse summary(@RequestParam String month, HttpServletRequest request) {
         YearMonth yearMonth = parseMonth(month);
-        List<Transaction> transactions = transactionRepository.findAllByTransactionDateGreaterThanEqualAndTransactionDateLessThan(
+        List<Transaction> transactions = transactionRepository.findAllByOwnerKeyAndTransactionDateGreaterThanEqualAndTransactionDateLessThan(
+                authenticatedUser(request).ownerKey(),
                 yearMonth.atDay(1),
                 yearMonth.plusMonths(1).atDay(1)
         );
@@ -99,15 +106,15 @@ public class TransactionController {
     }
 
     @GetMapping("/{id}")
-    public TransactionResponse get(@PathVariable Long id) {
-        return transactionRepository.findById(id)
+    public TransactionResponse get(@PathVariable Long id, HttpServletRequest request) {
+        return transactionRepository.findByIdAndOwnerKey(id, authenticatedUser(request).ownerKey())
                 .map(TransactionResponse::from)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Transaction not found"));
     }
 
     @PatchMapping("/{id}")
-    public TransactionResponse update(@PathVariable Long id, @RequestBody UpdateTransactionRequest request) {
-        return transactionRepository.findById(id)
+    public TransactionResponse update(@PathVariable Long id, @RequestBody UpdateTransactionRequest request, HttpServletRequest httpRequest) {
+        return transactionRepository.findByIdAndOwnerKey(id, authenticatedUser(httpRequest).ownerKey())
                 .map(transaction -> {
                     transaction.update(request.transactionDate(), request.amount(), request.merchant(), TransactionType.fromLabel(request.type()), request.category(), request.status());
                     return TransactionResponse.from(transactionRepository.save(transaction));
@@ -116,11 +123,20 @@ public class TransactionController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        if (!transactionRepository.existsById(id)) {
+    public ResponseEntity<Void> delete(@PathVariable Long id, HttpServletRequest request) {
+        String ownerKey = authenticatedUser(request).ownerKey();
+        if (!transactionRepository.existsByIdAndOwnerKey(id, ownerKey)) {
             throw new ResponseStatusException(NOT_FOUND, "Transaction not found");
         }
         transactionRepository.deleteById(id);
         return ResponseEntity.noContent().build();
+    }
+
+    private AuthenticatedUser authenticatedUser(HttpServletRequest request) {
+        Object value = request.getAttribute(ApiTokenFilter.AUTHENTICATED_USER_ATTRIBUTE);
+        if (value instanceof AuthenticatedUser authenticatedUser) {
+            return authenticatedUser;
+        }
+        return new AuthenticatedUser("default");
     }
 }

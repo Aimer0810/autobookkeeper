@@ -26,6 +26,7 @@ logging:
 
 autobookkeeper:
   api-token: ${AUTOBOOKKEEPER_API_TOKEN:}
+  user-tokens: ${AUTOBOOKKEEPER_USER_TOKENS:}
   ai:
     provider: ${AUTOBOOKKEEPER_AI_PROVIDER:cloud}
     api-key: ${VISION_API_KEY:{{API_KEY}}}

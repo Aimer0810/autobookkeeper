@@ -1,6 +1,5 @@
 package com.autobookkeeper.security;
 
-import com.autobookkeeper.config.AutoBookkeeperProperties;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -13,10 +12,12 @@ import java.io.IOException;
 @Component
 public class ApiTokenFilter extends OncePerRequestFilter {
 
-    private final AutoBookkeeperProperties properties;
+    public static final String AUTHENTICATED_USER_ATTRIBUTE = "authenticatedUser";
 
-    public ApiTokenFilter(AutoBookkeeperProperties properties) {
-        this.properties = properties;
+    private final UserTokenResolver userTokenResolver;
+
+    public ApiTokenFilter(UserTokenResolver userTokenResolver) {
+        this.userTokenResolver = userTokenResolver;
     }
 
     @Override
@@ -26,20 +27,21 @@ public class ApiTokenFilter extends OncePerRequestFilter {
             return;
         }
 
-        String configuredToken = properties.apiToken();
-        if (configuredToken == null || configuredToken.isBlank()) {
+        if (!userTokenResolver.hasConfiguredTokens()) {
             filterChain.doFilter(request, response);
             return;
         }
 
         String providedToken = request.getHeader("X-API-Token");
-        if (!configuredToken.equals(providedToken)) {
+        AuthenticatedUser authenticatedUser = userTokenResolver.resolve(providedToken).orElse(null);
+        if (authenticatedUser == null) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json;charset=UTF-8");
             response.getWriter().write("{\"error\":\"Unauthorized\"}");
             return;
         }
 
+        request.setAttribute(AUTHENTICATED_USER_ATTRIBUTE, authenticatedUser);
         filterChain.doFilter(request, response);
     }
 

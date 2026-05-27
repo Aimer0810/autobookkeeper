@@ -27,6 +27,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
         "autobookkeeper.api-token=test-token",
+        "autobookkeeper.user-tokens=alice:alice-token,bob:bob-token",
         "spring.datasource.url=jdbc:h2:mem:transaction-controller-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE"
 })
 class TransactionControllerTest {
@@ -243,6 +244,94 @@ class TransactionControllerTest {
         mockMvc.perform(get("/api/transactions/summary?month=bad")
                         .header("X-API-Token", "test-token"))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void isolatesTransactionsByUserToken() throws Exception {
+        Transaction aliceTransaction = new Transaction(
+                LocalDate.of(2026, 5, 1),
+                new BigDecimal("10.00"),
+                "Alice Store",
+                TransactionType.EXPENSE,
+                "餐饮",
+                "raw text",
+                "{}",
+                0.95,
+                ProcessingStatus.PROCESSED,
+                "ios-shortcuts",
+                Instant.parse("2026-05-01T12:00:00Z")
+        );
+        aliceTransaction.assignOwner("alice");
+        transactionRepository.save(aliceTransaction);
+        Transaction bobTransaction = new Transaction(
+                LocalDate.of(2026, 5, 1),
+                new BigDecimal("20.00"),
+                "Bob Store",
+                TransactionType.EXPENSE,
+                "餐饮",
+                "raw text",
+                "{}",
+                0.95,
+                ProcessingStatus.PROCESSED,
+                "ios-shortcuts",
+                Instant.parse("2026-05-01T13:00:00Z")
+        );
+        bobTransaction.assignOwner("bob");
+        transactionRepository.save(bobTransaction);
+
+        mockMvc.perform(get("/api/transactions?month=2026-05")
+                        .header("X-API-Token", "alice-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].merchant").value("Alice Store"));
+
+        mockMvc.perform(get("/api/transactions/summary?month=2026-05")
+                        .header("X-API-Token", "bob-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expenseTotal").value(20.00));
+    }
+
+    @Test
+    void preventsCrossUserReadUpdateAndDelete() throws Exception {
+        Transaction aliceTransaction = new Transaction(
+                LocalDate.of(2026, 5, 26),
+                new BigDecimal("19.90"),
+                "Alice Merchant",
+                TransactionType.EXPENSE,
+                "待分类",
+                "raw text",
+                "{}",
+                0.45,
+                ProcessingStatus.NEEDS_REVIEW,
+                "ios-shortcuts",
+                Instant.parse("2026-05-26T12:00:00Z")
+        );
+        aliceTransaction.assignOwner("alice");
+        Transaction saved = transactionRepository.save(aliceTransaction);
+
+        mockMvc.perform(get("/api/transactions/" + saved.getId())
+                        .header("X-API-Token", "bob-token"))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(patch("/api/transactions/" + saved.getId())
+                        .header("X-API-Token", "bob-token")
+                        .contentType(APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "merchant": "Bob Merchant",
+                                  "status": "PROCESSED"
+                                }
+                                """))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(delete("/api/transactions/" + saved.getId())
+                        .header("X-API-Token", "bob-token"))
+                .andExpect(status().isNotFound());
+
+        mockMvc.perform(get("/api/transactions/" + saved.getId())
+                        .header("X-API-Token", "alice-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.merchant").value("Alice Merchant"));
     }
 
     @Test

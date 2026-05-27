@@ -1,5 +1,7 @@
 package com.autobookkeeper.api;
 
+import com.autobookkeeper.repository.TransactionRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -19,12 +21,21 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @AutoConfigureMockMvc
 @TestPropertySource(properties = {
         "autobookkeeper.api-token=test-token",
+        "autobookkeeper.user-tokens=alice:alice-token,bob:bob-token",
         "spring.datasource.url=jdbc:h2:mem:process-controller-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE"
 })
 class ProcessControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
+
+    @Autowired
+    private TransactionRepository transactionRepository;
+
+    @BeforeEach
+    void cleanDatabase() {
+        transactionRepository.deleteAll();
+    }
 
     @Test
     void rejectsMissingApiTokenWhenConfigured() throws Exception {
@@ -54,6 +65,28 @@ class ProcessControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.transactionId").exists())
                 .andExpect(jsonPath("$.needsReview").value(true));
+    }
+
+    @Test
+    void storesProcessedTransactionForCurrentUserToken() throws Exception {
+        String base64 = Base64.getEncoder().encodeToString("fake-image".getBytes());
+
+        mockMvc.perform(post("/api/process")
+                        .header("X-API-Token", "alice-token")
+                        .contentType(APPLICATION_JSON)
+                        .content("{\"imageBase64\":\"" + base64 + "\",\"source\":\"ios-shortcuts\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.transactionId").exists());
+
+        mockMvc.perform(get("/api/transactions")
+                        .header("X-API-Token", "alice-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1));
+
+        mockMvc.perform(get("/api/transactions")
+                        .header("X-API-Token", "bob-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(0));
     }
 
     @Test

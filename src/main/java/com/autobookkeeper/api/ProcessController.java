@@ -7,7 +7,10 @@ import com.autobookkeeper.api.dto.ProcessImageResponse;
 import com.autobookkeeper.domain.Bill;
 import com.autobookkeeper.domain.Transaction;
 import com.autobookkeeper.repository.TransactionRepository;
+import com.autobookkeeper.security.ApiTokenFilter;
+import com.autobookkeeper.security.AuthenticatedUser;
 import jakarta.validation.Valid;
+import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,7 +35,7 @@ public class ProcessController {
     }
 
     @PostMapping("/process")
-    public ProcessImageResponse process(@Valid @RequestBody ProcessImageRequest request) {
+    public ProcessImageResponse process(@Valid @RequestBody ProcessImageRequest request, HttpServletRequest httpRequest) {
         byte[] imageData;
         try {
             imageData = Base64.getDecoder().decode(normalizeBase64(request.imageBase64()));
@@ -40,7 +43,9 @@ public class ProcessController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "imageBase64 must be valid Base64");
         }
         Bill bill = aiService.extractBillFromImage(imageData);
-        Transaction transaction = transactionRepository.save(accountingEngine.createTransaction(bill, request.source()));
+        Transaction transactionToSave = accountingEngine.createTransaction(bill, request.source());
+        transactionToSave.assignOwner(authenticatedUser(httpRequest).ownerKey());
+        Transaction transaction = transactionRepository.save(transactionToSave);
         return new ProcessImageResponse(
                 transaction.getId(),
                 transaction.getStatus(),
@@ -60,5 +65,13 @@ public class ProcessController {
             value = value.substring(commaIndex + 1);
         }
         return value.replaceAll("\\s", "");
+    }
+
+    private AuthenticatedUser authenticatedUser(HttpServletRequest request) {
+        Object value = request.getAttribute(ApiTokenFilter.AUTHENTICATED_USER_ATTRIBUTE);
+        if (value instanceof AuthenticatedUser authenticatedUser) {
+            return authenticatedUser;
+        }
+        return new AuthenticatedUser("default");
     }
 }
