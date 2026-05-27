@@ -215,6 +215,10 @@
 <script>
     const tokenInput = document.getElementById('token');
     tokenInput.value = localStorage.getItem('autobookkeeper-token') || '';
+    if (tokenInput.value && !localStorage.getItem('autobookkeeper-username')) {
+        localStorage.removeItem('autobookkeeper-token');
+        tokenInput.value = '';
+    }
     updateAccountStatus();
     document.getElementById('monthFilter').value = currentMonth();
     const categoriesByType = {
@@ -226,7 +230,7 @@
 
     function saveToken() {
         localStorage.setItem('autobookkeeper-token', tokenInput.value);
-        localStorage.removeItem('autobookkeeper-username');
+        localStorage.setItem('autobookkeeper-username', '手动 Token');
         updateAccountStatus();
         hideNotice();
         refreshVisibility();
@@ -314,7 +318,7 @@
     async function migrateLegacyData() {
         const token = localStorage.getItem('autobookkeeper-token');
         const legacyToken = document.getElementById('legacyToken').value;
-        if (!token || !localStorage.getItem('autobookkeeper-username')) {
+        if (!token || !localStorage.getItem('autobookkeeper-username') || localStorage.getItem('autobookkeeper-username') === '手动 Token') {
             showNotice('请先用新账号登录，再迁移旧数据。');
             return;
         }
@@ -335,11 +339,13 @@
 
     function refreshVisibility() {
         const token = localStorage.getItem('autobookkeeper-token');
-        document.getElementById('authCard').style.display = token ? 'none' : '';
+        const username = localStorage.getItem('autobookkeeper-username');
+        const authenticated = Boolean(token && username);
+        document.getElementById('authCard').style.display = authenticated ? 'none' : '';
         document.querySelectorAll('.dashboard').forEach(element => {
-            element.style.display = token ? '' : 'none';
+            element.style.display = authenticated ? '' : 'none';
         });
-        if (token) {
+        if (authenticated) {
             loadDashboard();
         }
     }
