@@ -58,6 +58,8 @@
         .auth-panel input { margin-top: 6px; }
         .token-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
         .dashboard { display: none; }
+        .auth-switch { margin-top: 12px; }
+        .auth-switch a { color: #1d4ed8; cursor: pointer; font-weight: 700; }
         @media (max-width: 640px) {
             .row { grid-template-columns: 1fr; }
             .actions { text-align: left; }
@@ -74,38 +76,32 @@
     <p>智能截图记账助手账目看板</p>
 </header>
 <main>
-    <section class="card">
-        <h2>账号</h2>
+    <section id="authCard" class="card">
+        <h2 id="authTitle">登录</h2>
         <p id="accountStatus" class="meta">未登录</p>
         <div id="notice" class="notice"></div>
-        <div class="auth-grid">
-            <div class="auth-panel">
-                <h3>登录</h3>
-                <label>用户名
-                    <input id="loginUsername" type="text" autocomplete="username">
-                </label>
-                <label>密码
-                    <input id="loginPassword" type="password" autocomplete="current-password">
-                </label>
-                <button onclick="loginAccount()">登录并刷新</button>
-            </div>
-            <div class="auth-panel">
-                <h3>注册</h3>
-                <label>用户名
-                    <input id="registerUsername" type="text" autocomplete="username">
-                </label>
-                <label>密码
-                    <input id="registerPassword" type="password" autocomplete="new-password">
-                </label>
-                <label>邀请码
-                    <input id="registerInviteCode" type="password">
-                </label>
-                <button onclick="registerAccount()">注册并登录</button>
-            </div>
+        <div id="loginPanel" class="auth-panel">
+            <label>用户名
+                <input id="loginUsername" type="text" autocomplete="username">
+            </label>
+            <label>密码
+                <input id="loginPassword" type="password" autocomplete="current-password">
+            </label>
+            <button onclick="loginAccount()">登录</button>
+            <p class="auth-switch meta">还没有账号？<a onclick="showRegister()">去注册</a></p>
         </div>
-        <div class="token-actions">
-            <button class="secondary" onclick="copyToken()">复制快捷指令 Token</button>
-            <button class="muted" onclick="logoutAccount()">退出登录</button>
+        <div id="registerPanel" class="auth-panel" style="display:none">
+            <label>用户名
+                <input id="registerUsername" type="text" autocomplete="username">
+            </label>
+            <label>密码
+                <input id="registerPassword" type="password" autocomplete="new-password">
+            </label>
+            <label>邀请码
+                <input id="registerInviteCode" type="password">
+            </label>
+            <button onclick="registerAccount()">注册并登录</button>
+            <p class="auth-switch meta">已有账号？<a onclick="showLogin()">返回登录</a></p>
         </div>
         <details>
             <summary class="meta">已有 API Token / 旧版手动输入</summary>
@@ -113,6 +109,14 @@
             <input id="token" type="password" placeholder="输入 X-API-Token 后保存到本浏览器">
             <button onclick="saveToken()">保存并刷新</button>
         </details>
+    </section>
+    <section class="card dashboard">
+        <h2>账号</h2>
+        <p id="dashboardAccountStatus" class="meta"></p>
+        <div class="token-actions">
+            <button class="secondary" onclick="copyToken()">复制快捷指令 Token</button>
+            <button class="muted" onclick="logoutAccount()">退出登录</button>
+        </div>
         <details id="migrationPanel">
             <summary class="meta">把旧数据迁移到当前账号</summary>
             <label for="legacyToken">旧版 API Token</label>
@@ -224,7 +228,22 @@
         localStorage.setItem('autobookkeeper-token', tokenInput.value);
         localStorage.removeItem('autobookkeeper-username');
         updateAccountStatus();
+        hideNotice();
         refreshVisibility();
+    }
+
+    function showRegister() {
+        document.getElementById('authTitle').textContent = '注册';
+        document.getElementById('loginPanel').style.display = 'none';
+        document.getElementById('registerPanel').style.display = '';
+        hideNotice();
+    }
+
+    function showLogin() {
+        document.getElementById('authTitle').textContent = '登录';
+        document.getElementById('registerPanel').style.display = 'none';
+        document.getElementById('loginPanel').style.display = '';
+        hideNotice();
     }
 
     async function registerAccount() {
@@ -256,6 +275,7 @@
             localStorage.setItem('autobookkeeper-username', data.username);
             tokenInput.value = data.token;
             updateAccountStatus();
+            hideNotice();
             refreshVisibility();
         } catch (error) {
             showNotice(error.message);
@@ -286,7 +306,9 @@
     function updateAccountStatus() {
         const username = localStorage.getItem('autobookkeeper-username');
         const token = localStorage.getItem('autobookkeeper-token');
-        document.getElementById('accountStatus').textContent = username ? `已登录：${username}` : token ? '已保存 API Token' : '未登录';
+        const status = username ? `已登录：${username}` : token ? '已保存 API Token' : '未登录';
+        document.getElementById('accountStatus').textContent = status;
+        document.getElementById('dashboardAccountStatus').textContent = status;
     }
 
     async function migrateLegacyData() {
@@ -313,6 +335,7 @@
 
     function refreshVisibility() {
         const token = localStorage.getItem('autobookkeeper-token');
+        document.getElementById('authCard').style.display = token ? 'none' : '';
         document.querySelectorAll('.dashboard').forEach(element => {
             element.style.display = token ? '' : 'none';
         });
