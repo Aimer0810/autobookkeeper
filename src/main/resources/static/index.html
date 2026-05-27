@@ -5,10 +5,12 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AutoBookkeeper</title>
     <style>
-        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: #f6f7fb; color: #172033; }
-        header { padding: 24px 18px; background: linear-gradient(135deg, #1d4ed8, #06b6d4); color: white; }
-        main { max-width: 960px; margin: 0 auto; padding: 18px; }
-        .card { background: white; border-radius: 18px; box-shadow: 0 10px 30px rgba(15, 23, 42, .08); padding: 18px; margin-bottom: 16px; }
+        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: radial-gradient(circle at top left, #dbeafe, transparent 32%), #f6f7fb; color: #172033; }
+        header { padding: 28px 18px 46px; background: linear-gradient(135deg, #1d4ed8, #06b6d4); color: white; box-shadow: 0 18px 45px rgba(29, 78, 216, .22); }
+        header h1 { margin: 0; }
+        header p { margin-bottom: 0; opacity: .9; }
+        main { max-width: 1040px; margin: -28px auto 0; padding: 18px; }
+        .card { background: rgba(255, 255, 255, .96); border: 1px solid rgba(226, 232, 240, .8); border-radius: 22px; box-shadow: 0 18px 45px rgba(15, 23, 42, .08); padding: 18px; margin-bottom: 16px; }
         input, select { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #d7dce8; border-radius: 12px; }
         button { margin-top: 10px; padding: 12px 16px; border: 0; border-radius: 12px; background: #1d4ed8; color: white; font-weight: 700; cursor: pointer; }
         button.secondary { background: #f97316; }
@@ -21,7 +23,7 @@
         .amount.income { color: #047857; }
         .amount.expense { color: #dc2626; }
         .summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0 12px; }
-        .summary-box { border-radius: 16px; background: #f8fafc; padding: 12px; }
+        .summary-box { border-radius: 18px; background: linear-gradient(180deg, #f8fafc, #eef2ff); padding: 14px; border: 1px solid #e2e8f0; }
         .summary-label { color: #64748b; font-size: 12px; font-weight: 700; }
         .summary-value { font-size: 22px; font-weight: 900; margin-top: 4px; }
         .summary-value.income { color: #047857; }
@@ -35,7 +37,7 @@
         .toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 10px; }
         .toolbar label { display: inline-flex; gap: 6px; align-items: center; color: #475569; font-size: 14px; font-weight: 700; }
         .toolbar input { width: auto; }
-        .filter-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
+        .filter-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
         .filter-grid label { font-size: 13px; color: #475569; font-weight: 700; }
         .filter-grid input, .filter-grid select { margin-top: 6px; }
         .quick-category { width: 120px; padding: 8px; margin: 0 0 8px 6px; }
@@ -63,9 +65,15 @@
         .dashboard-hero { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: start; }
         .dashboard-hero h2 { margin: 0; font-size: 28px; }
         .dashboard-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+        .locator-box { margin-top: 16px; border: 1px solid #bfdbfe; background: linear-gradient(135deg, #eff6ff, #f8fafc); border-radius: 16px; padding: 14px; }
+        .locator-box h3 { margin: 0 0 8px; color: #1d4ed8; }
+        .locator-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
         .migration-box { margin-top: 16px; border: 1px solid #fed7aa; background: #fff7ed; border-radius: 16px; padding: 14px; }
         .migration-box h3 { margin: 0 0 8px; color: #9a3412; }
         .migration-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
+        .section-title { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 12px; }
+        .section-title h2 { margin: 0; }
+        .highlight-row { background: #fff7ed; border-color: #fb923c; border-radius: 16px; padding-left: 12px; padding-right: 12px; }
         @media (max-width: 640px) {
             .row { grid-template-columns: 1fr; }
             .actions { text-align: left; }
@@ -75,6 +83,7 @@
             .auth-grid { grid-template-columns: 1fr; }
             .dashboard-hero { grid-template-columns: 1fr; }
             .dashboard-actions { justify-content: flex-start; }
+            .locator-row { grid-template-columns: 1fr; }
             .migration-row { grid-template-columns: 1fr; }
         }
     </style>
@@ -126,6 +135,14 @@
             </div>
         </div>
         <div id="dashboardNotice" class="notice"></div>
+        <div class="locator-box">
+            <h3>快速定位账目</h3>
+            <p class="meta">快捷指令返回交易 ID 后，在这里输入 ID，会自动跳到该账目所在月份。</p>
+            <div class="locator-row">
+                <input id="globalTransactionId" type="search" placeholder="输入交易 ID，例如 35">
+                <button onclick="locateTransactionById()">定位账目</button>
+            </div>
+        </div>
         <div class="migration-box">
             <h3>旧数据迁移</h3>
             <p class="meta">如果你之前已有旧账单，在这里输入旧版 API Token，把旧账单绑定到当前账号。</p>
@@ -136,7 +153,10 @@
         </div>
     </section>
     <section class="card dashboard">
-        <h2>月份账目</h2>
+        <div class="section-title">
+            <h2>月份账目</h2>
+            <span id="activeMonthLabel" class="meta"></span>
+        </div>
         <div class="filter-grid">
             <label>月份
                 <input id="monthFilter" type="month" onchange="loadDashboard()">
@@ -163,7 +183,10 @@
         <div id="summary">加载中...</div>
     </section>
     <section class="card dashboard">
-        <h2>最近账目</h2>
+        <div class="section-title">
+            <h2>最近账目</h2>
+            <span class="meta">可按商户、ID、类型和分类筛选</span>
+        </div>
         <div class="toolbar">
             <label>
                 <input id="reviewOnly" type="checkbox" onchange="renderTransactions()">
@@ -241,6 +264,7 @@
     };
     let editingTransactionId = null;
     let latestTransactions = [];
+    let highlightedTransactionId = null;
 
     function showRegister() {
         document.getElementById('authTitle').textContent = '注册';
@@ -322,6 +346,28 @@
         showNotice('Token 已复制，可粘贴到 iPhone 快捷指令的 X-API-Token。');
     }
 
+    async function locateTransactionById() {
+        const id = document.getElementById('globalTransactionId').value.trim();
+        const token = localStorage.getItem('autobookkeeper-token');
+        if (!id) {
+            showNotice('请输入快捷指令返回的交易 ID。');
+            return;
+        }
+        try {
+            const item = await fetchTransaction(id, token);
+            if (item.transactionDate) {
+                document.getElementById('monthFilter').value = item.transactionDate.slice(0, 7);
+            }
+            document.getElementById('transactionIdSearch').value = id;
+            highlightedTransactionId = String(id);
+            await loadDashboard();
+            document.getElementById('transactions').scrollIntoView({ behavior: 'smooth', block: 'start' });
+            showNotice(`已定位到账目 ID ${id}，日期 ${item.transactionDate || '未知'}。`);
+        } catch (error) {
+            showNotice('没有找到这笔账目，请确认 ID 属于当前登录账号。');
+        }
+    }
+
     function updateAccountStatus() {
         const username = localStorage.getItem('autobookkeeper-username');
         const token = localStorage.getItem('autobookkeeper-token');
@@ -384,6 +430,7 @@
         const token = localStorage.getItem('autobookkeeper-token');
         if (token) headers['X-API-Token'] = token;
         const container = document.getElementById('summary');
+        document.getElementById('activeMonthLabel').textContent = `当前月份：${selectedMonth()}`;
         try {
             const response = await fetch(`/api/transactions/summary?month=${selectedMonth()}`, { headers });
             if (response.status === 401) {
@@ -450,7 +497,7 @@
         if (rows.length === 0) {
             container.innerHTML = reviewOnly ? '<p class="meta">暂无需复核账目。</p>' : `
                 <p class="meta">当前月份暂无账目。</p>
-                <p class="meta">如果你之前已有旧账单，请先在上方“把旧数据迁移到当前账号”输入旧版 API Token 完成迁移；如果账单不是本月，请切换月份查看。</p>
+                <p class="meta">如果快捷指令返回了交易 ID，请用上方“快速定位账目”自动跳到对应月份；如果你之前已有旧账单，请先迁移旧数据。</p>
             `;
             return;
         }
@@ -460,7 +507,7 @@
             const amountClass = isIncome ? 'income' : 'expense';
             const amountPrefix = isIncome ? '+' : '-';
             return `
-                <div class="row">
+                <div class="row ${String(item.id) === highlightedTransactionId ? 'highlight-row' : ''}">
                     <div>
                         <div class="merchant">${escapeHtml(item.merchant)}</div>
                         <div class="meta">ID ${item.id} · ${item.transactionDate || ''} · ${type} · ${escapeHtml(item.category)} · <span class="status ${statusClass(item.status)}">${statusLabel(item.status)}</span></div>
