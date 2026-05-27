@@ -94,7 +94,8 @@ class CloudVisionServiceImplTest {
 
         String requestBody = service.buildVisionRequest("image-bytes".getBytes());
 
-        assertThat(requestBody).contains("不要拼音化");
+        assertThat(requestBody).contains("拼音、英文、昵称或账号名称，也要原样作为 merchant 返回");
+        assertThat(requestBody).contains("例如 ru zi ni sa，也要原样填入 merchant");
         assertThat(requestBody).contains("未知商家");
         assertThat(requestBody).contains("confidence 不要高于 0.74");
         assertThat(requestBody).contains("餐饮、交通、购物、住房、医疗、娱乐、生活缴费、转账、收入、其他、未分类");
