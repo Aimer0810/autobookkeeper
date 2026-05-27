@@ -2,6 +2,7 @@ package com.autobookkeeper.ai;
 
 import com.autobookkeeper.config.AutoBookkeeperProperties;
 import com.autobookkeeper.domain.Bill;
+import com.autobookkeeper.domain.TransactionType;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -93,7 +94,7 @@ public class CloudVisionServiceImpl implements AIService {
         ArrayNode messages = root.putArray("messages");
         ObjectNode system = messages.addObject();
         system.put("role", "system");
-        system.put("content", "只返回 JSON，不要 Markdown。字段：date, amount, merchant, category, confidence, rawText。merchant 取收款方/商户/对方账户/商品说明/备注；拼音、英文、昵称原样返回，确实看不清才用未知商家。category 限：餐饮、交通、购物、住房、医疗、娱乐、生活缴费、转账、收入、其他、未分类。金额/商户/日期不确定时 confidence<=0.74。");
+        system.put("content", "只返回 JSON，不要 Markdown。字段：date, amount, merchant, type, category, confidence, rawText。type 只能是收入或支出，付款/消费/转给别人是支出，工资/奖金/报销/退款/收到转账是收入，收入或支出不确定时用支出。merchant 取收款方/商户/对方账户/商品说明/备注；拼音、英文、昵称原样返回，确实看不清才用未知商家。category 限：餐饮、交通、购物、住房、医疗、娱乐、生活缴费、转账、收入、其他、未分类。金额/商户/日期不确定时 confidence<=0.74。");
 
         ObjectNode user = messages.addObject();
         user.put("role", "user");
@@ -119,10 +120,11 @@ public class CloudVisionServiceImpl implements AIService {
             LocalDate date = LocalDate.parse(text(root, "date", LocalDate.now().toString()));
             BigDecimal amount = new BigDecimal(text(root, "amount", "0"));
             String merchant = text(root, "merchant", "未知商家");
+            TransactionType type = TransactionType.fromLabel(text(root, "type", "支出"));
             String category = text(root, "category", "未分类");
             String rawText = text(root, "rawText", "");
             double confidence = root.path("confidence").asDouble(0.0);
-            return new Bill(date, amount, merchant, category, rawText, json, confidence, confidence < 0.75);
+            return new Bill(date, amount, merchant, type, category, rawText, json, confidence, confidence < 0.75);
         } catch (Exception exception) {
             logger.warn("Cloud vision JSON parsing failed. contentSnippet={}", abbreviate(json), exception);
             return reviewBill("视觉模型返回 JSON 解析失败。", json);
@@ -180,6 +182,7 @@ public class CloudVisionServiceImpl implements AIService {
                 LocalDate.now(),
                 BigDecimal.ZERO,
                 "待复核商家",
+                TransactionType.EXPENSE,
                 "未分类",
                 rawText,
                 structuredJson,

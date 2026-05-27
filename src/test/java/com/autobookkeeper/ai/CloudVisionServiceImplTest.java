@@ -2,6 +2,7 @@ package com.autobookkeeper.ai;
 
 import com.autobookkeeper.config.AutoBookkeeperProperties;
 import com.autobookkeeper.domain.Bill;
+import com.autobookkeeper.domain.TransactionType;
 import com.sun.net.httpserver.HttpServer;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.env.MockEnvironment;
@@ -26,11 +27,12 @@ class CloudVisionServiceImplTest {
                 new AutoBookkeeperProperties.Privacy(false, true)
         ));
 
-        Bill bill = service.parseBillJson("{\"date\":\"2026-05-25\",\"amount\":\"42.50\",\"merchant\":\"瑞幸咖啡\",\"category\":\"餐饮\",\"confidence\":0.92,\"rawText\":\"支付给瑞幸咖啡 42.50\"}");
+        Bill bill = service.parseBillJson("{\"date\":\"2026-05-25\",\"amount\":\"42.50\",\"merchant\":\"瑞幸咖啡\",\"type\":\"支出\",\"category\":\"餐饮\",\"confidence\":0.92,\"rawText\":\"支付给瑞幸咖啡 42.50\"}");
 
         assertThat(bill.date()).isEqualTo(LocalDate.of(2026, 5, 25));
         assertThat(bill.amount()).isEqualByComparingTo(new BigDecimal("42.50"));
         assertThat(bill.merchant()).isEqualTo("瑞幸咖啡");
+        assertThat(bill.type()).isEqualTo(TransactionType.EXPENSE);
         assertThat(bill.category()).isEqualTo("餐饮");
         assertThat(bill.confidence()).isEqualTo(0.92);
         assertThat(bill.needsReview()).isFalse();
@@ -83,6 +85,7 @@ class CloudVisionServiceImplTest {
 
         assertThat(requestBody).contains("\"model\":\"qwen3.6-flash\"");
         assertThat(requestBody).contains("\"max_tokens\":220");
+        assertThat(requestBody).contains("type");
     }
 
     @Test
@@ -97,6 +100,7 @@ class CloudVisionServiceImplTest {
 
         assertThat(requestBody).contains("拼音、英文、昵称原样返回");
         assertThat(requestBody).contains("如 ru zi ni sa，原样填入 merchant");
+        assertThat(requestBody).contains("收入或支出不确定时用支出");
         assertThat(requestBody).contains("未知商家");
         assertThat(requestBody).contains("confidence<=0.74");
         assertThat(requestBody).contains("餐饮、交通、购物、住房、医疗、娱乐、生活缴费、转账、收入、其他、未分类");
