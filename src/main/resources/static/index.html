@@ -18,6 +18,15 @@
         .merchant { font-weight: 700; }
         .meta { color: #64748b; font-size: 13px; margin-top: 4px; }
         .amount { font-weight: 800; color: #0f766e; }
+        .amount.income { color: #047857; }
+        .amount.expense { color: #dc2626; }
+        .summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0 12px; }
+        .summary-box { border-radius: 16px; background: #f8fafc; padding: 12px; }
+        .summary-label { color: #64748b; font-size: 12px; font-weight: 700; }
+        .summary-value { font-size: 22px; font-weight: 900; margin-top: 4px; }
+        .summary-value.income { color: #047857; }
+        .summary-value.expense { color: #dc2626; }
+        .summary-value.balance { color: #1d4ed8; }
         .status { display: inline-block; padding: 3px 8px; border-radius: 999px; background: #eef2ff; color: #3730a3; font-size: 12px; }
         .status.review { background: #fff7ed; color: #c2410c; }
         .status.processed { background: #ecfdf5; color: #047857; }
@@ -47,6 +56,7 @@
             .actions { text-align: left; }
             .modal-grid { grid-template-columns: 1fr; }
             .filter-grid { grid-template-columns: 1fr; }
+            .summary-grid { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -70,20 +80,16 @@
             <label>搜索商户
                 <input id="merchantSearch" type="search" placeholder="输入商户关键字" oninput="renderTransactions()">
             </label>
+            <label>类型筛选
+                <select id="typeFilter" onchange="updateCategoryFilterOptions(); renderTransactions()">
+                    <option value="">全部类型</option>
+                    <option value="支出">支出</option>
+                    <option value="收入">收入</option>
+                </select>
+            </label>
             <label>分类筛选
                 <select id="categoryFilter" onchange="renderTransactions()">
                     <option value="">全部分类</option>
-                    <option value="餐饮">餐饮</option>
-                    <option value="交通">交通</option>
-                    <option value="购物">购物</option>
-                    <option value="住房">住房</option>
-                    <option value="医疗">医疗</option>
-                    <option value="娱乐">娱乐</option>
-                    <option value="生活缴费">生活缴费</option>
-                    <option value="转账">转账</option>
-                    <option value="收入">收入</option>
-                    <option value="其他">其他</option>
-                    <option value="未分类">未分类</option>
                 </select>
             </label>
         </div>
@@ -114,19 +120,14 @@
             <label>商户
                 <input id="editMerchant" type="text">
             </label>
+            <label>类型
+                <select id="editType" onchange="updateEditCategoryOptions()">
+                    <option value="支出">支出</option>
+                    <option value="收入">收入</option>
+                </select>
+            </label>
             <label>分类
                 <select id="editCategory">
-                    <option value="餐饮">餐饮</option>
-                    <option value="交通">交通</option>
-                    <option value="购物">购物</option>
-                    <option value="住房">住房</option>
-                    <option value="医疗">医疗</option>
-                    <option value="娱乐">娱乐</option>
-                    <option value="生活缴费">生活缴费</option>
-                    <option value="转账">转账</option>
-                    <option value="收入">收入</option>
-                    <option value="其他">其他</option>
-                    <option value="未分类">未分类</option>
                 </select>
             </label>
             <label>状态
@@ -163,6 +164,10 @@
     const tokenInput = document.getElementById('token');
     tokenInput.value = localStorage.getItem('autobookkeeper-token') || '';
     document.getElementById('monthFilter').value = currentMonth();
+    const categoriesByType = {
+        '支出': ['餐饮', '交通', '购物', '住房', '医疗', '娱乐', '生活缴费', '转账', '其他', '未分类'],
+        '收入': ['工资', '奖金', '报销', '退款', '转账收入', '其他收入']
+    };
     let editingTransactionId = null;
     let latestTransactions = [];
 
@@ -194,11 +199,17 @@
             const response = await fetch(`/api/transactions/summary?month=${selectedMonth()}`, { headers });
             if (!response.ok) throw new Error(response.status === 401 ? 'Token 无效或未填写。' : '加载汇总失败。');
             const data = await response.json();
-            const chips = (data.categorySummaries || []).map(item => `<span class="summary-chip">${escapeHtml(item.category)} ¥${item.amount}</span>`).join('');
+            const expenseChips = (data.expenseCategorySummaries || []).map(item => `<span class="summary-chip">支出 · ${escapeHtml(item.category)} ¥${item.amount}</span>`).join('');
+            const incomeChips = (data.incomeCategorySummaries || []).map(item => `<span class="summary-chip">收入 · ${escapeHtml(item.category)} ¥${item.amount}</span>`).join('');
+            const categoryChips = `${incomeChips}${expenseChips}`;
             container.innerHTML = `
                 <div class="meta">${data.month}</div>
-                <div class="summary-total">¥${data.totalAmount}</div>
-                <div class="summary-categories">${chips || '<span class="meta">暂无分类支出</span>'}</div>
+                <div class="summary-grid">
+                    <div class="summary-box"><div class="summary-label">收入</div><div class="summary-value income">+¥${data.incomeTotal || 0}</div></div>
+                    <div class="summary-box"><div class="summary-label">支出</div><div class="summary-value expense">-¥${data.expenseTotal || 0}</div></div>
+                    <div class="summary-box"><div class="summary-label">结余</div><div class="summary-value balance">¥${data.balance || 0}</div></div>
+                </div>
+                <div class="summary-categories">${categoryChips || '<span class="meta">暂无分类账目</span>'}</div>
             `;
         } catch (error) {
             container.innerHTML = '<p class="meta">汇总加载失败。</p>';
@@ -228,9 +239,11 @@
         const container = document.getElementById('transactions');
         const reviewOnly = document.getElementById('reviewOnly').checked;
         const merchantQuery = document.getElementById('merchantSearch').value.trim().toLowerCase();
+        const type = document.getElementById('typeFilter').value;
         const category = document.getElementById('categoryFilter').value;
         const rows = latestTransactions.filter(item => {
             if (reviewOnly && item.status !== 'NEEDS_REVIEW') return false;
+            if (type && item.type !== type) return false;
             if (category && item.category !== category) return false;
             if (merchantQuery && !String(item.merchant || '').toLowerCase().includes(merchantQuery)) return false;
             return true;
@@ -239,16 +252,21 @@
             container.innerHTML = reviewOnly ? '<p class="meta">暂无需复核账目。</p>' : '<p class="meta">暂无账目。请先通过 iPhone 快捷指令上传截图。</p>';
             return;
         }
-        container.innerHTML = rows.map(item => `
+        container.innerHTML = rows.map(item => {
+            const type = item.type || '支出';
+            const isIncome = type === '收入';
+            const amountClass = isIncome ? 'income' : 'expense';
+            const amountPrefix = isIncome ? '+' : '-';
+            return `
                 <div class="row">
                     <div>
                         <div class="merchant">${escapeHtml(item.merchant)}</div>
-                        <div class="meta">${item.transactionDate || ''} · ${escapeHtml(item.category)} · <span class="status ${statusClass(item.status)}">${statusLabel(item.status)}</span></div>
+                        <div class="meta">${item.transactionDate || ''} · ${type} · ${escapeHtml(item.category)} · <span class="status ${statusClass(item.status)}">${statusLabel(item.status)}</span></div>
                     </div>
                     <div class="actions">
-                        <div class="amount">¥${item.amount}</div>
+                        <div class="amount ${amountClass}">${amountPrefix}¥${item.amount}</div>
                         <select class="quick-category" onchange="quickUpdateCategory(${item.id}, this.value)">
-                            ${categoryOptions(item.category)}
+                            ${categoryOptions(type, item.category)}
                         </select>
                         <button class="muted" onclick="editTransaction(${item.id})">编辑</button>
                         <button class="muted" onclick="showDetails(${item.id})">详情</button>
@@ -256,7 +274,8 @@
                         <button class="danger" onclick="deleteTransaction(${item.id})">删除</button>
                     </div>
                 </div>
-            `).join('');
+            `;
+        }).join('');
     }
 
     async function markProcessed(id) {
@@ -273,6 +292,7 @@
                     transactionDate: item.transactionDate,
                     amount: item.amount,
                     merchant: item.merchant,
+                    type: item.type || '支出',
                     category: item.category,
                     status: 'PROCESSED'
                 })
@@ -301,6 +321,7 @@
                     transactionDate: item.transactionDate,
                     amount: item.amount,
                     merchant: item.merchant,
+                    type: item.type || '支出',
                     category,
                     status: item.status
                 })
@@ -324,7 +345,8 @@
             document.getElementById('editDate').value = item.transactionDate || '';
             document.getElementById('editAmount').value = item.amount || '';
             document.getElementById('editMerchant').value = item.merchant || '';
-            document.getElementById('editCategory').value = item.category || '其他';
+            document.getElementById('editType').value = item.type || '支出';
+            updateEditCategoryOptions(item.category || '其他');
             document.getElementById('editStatus').value = item.status || 'NEEDS_REVIEW';
             document.getElementById('editorBackdrop').style.display = 'flex';
         } catch (error) {
@@ -367,6 +389,7 @@
                     transactionDate: emptyToNull(document.getElementById('editDate').value),
                     amount: emptyToNull(document.getElementById('editAmount').value),
                     merchant: emptyToNull(document.getElementById('editMerchant').value),
+                    type: emptyToNull(document.getElementById('editType').value),
                     category: emptyToNull(document.getElementById('editCategory').value),
                     status: emptyToNull(document.getElementById('editStatus').value)
                 })
@@ -442,12 +465,30 @@
         }
     }
 
-    function categoryOptions(selected) {
-        return ['餐饮', '交通', '购物', '住房', '医疗', '娱乐', '生活缴费', '转账', '收入', '其他', '未分类']
+    function allCategories() {
+        return [...categoriesByType['支出'], ...categoriesByType['收入']];
+    }
+
+    function categoryOptions(type, selected) {
+        return (categoriesByType[type] || allCategories())
                 .map(category => `<option value="${category}" ${category === selected ? 'selected' : ''}>${category}</option>`)
                 .join('');
     }
 
+    function updateCategoryFilterOptions() {
+        const type = document.getElementById('typeFilter').value;
+        const selected = document.getElementById('categoryFilter').value;
+        document.getElementById('categoryFilter').innerHTML = `<option value="">全部分类</option>${categoryOptions(type, selected)}`;
+    }
+
+    function updateEditCategoryOptions(selected) {
+        const type = document.getElementById('editType').value || '支出';
+        const current = selected || document.getElementById('editCategory').value;
+        document.getElementById('editCategory').innerHTML = categoryOptions(type, current);
+    }
+
+    updateCategoryFilterOptions();
+    updateEditCategoryOptions();
     loadDashboard();
 </script>
 </body>
