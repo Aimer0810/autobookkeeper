@@ -66,18 +66,14 @@ public class CloudVisionServiceImpl implements AIService {
             HttpClient client = HttpClient.newBuilder()
                     .connectTimeout(Duration.ofMillis(timeoutMs()))
                     .build();
-            HttpRequest request = HttpRequest.newBuilder(endpoint)
-                    .timeout(Duration.ofMillis(timeoutMs()))
-                    .header("Authorization", "Bearer " + apiKey)
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(buildVisionRequest(imageData)))
-                    .build();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                logger.warn("Cloud vision API returned status {} for endpoint {} model {} bodySnippet {}", response.statusCode(), endpoint, model(), abbreviate(response.body()));
-                return reviewBill("云端视觉 API 返回非成功状态：" + response.statusCode(), "{\"provider\":\"cloud\",\"status\":" + response.statusCode() + "}");
+            Bill bill = requestBill(client, apiKey, imageData, false);
+            if (shouldRetryWithStrictPrompt(bill)) {
+                Bill strictBill = requestBill(client, apiKey, imageData, true);
+                if (!shouldRetryWithStrictPrompt(strictBill) || strictBill.confidence() >= bill.confidence()) {
+                    return strictBill;
+                }
             }
-            return parseBillJson(extractContent(response.body()));
+            return bill;
         } catch (Exception exception) {
             logger.warn("Cloud vision API call failed for endpoint {} model {}", endpoint, model(), exception);
             return reviewBill("云端视觉 API 调用失败：" + exception.getClass().getSimpleName() + " " + abbreviate(exception.getMessage()), "{\"provider\":\"cloud\",\"error\":\"vision-api-call-failed\"}");
@@ -85,23 +81,27 @@ public class CloudVisionServiceImpl implements AIService {
     }
 
     String buildVisionRequest(byte[] imageData) {
+        return buildVisionRequest(imageData, false);
+    }
+
+    String buildVisionRequest(byte[] imageData, boolean strictReview) {
         ObjectNode root = objectMapper.createObjectNode();
         root.put("model", model());
-        root.put("max_tokens", 220);
+        root.put("max_tokens", strictReview ? 360 : 300);
         ObjectNode responseFormat = root.putObject("response_format");
         responseFormat.put("type", "json_object");
 
         ArrayNode messages = root.putArray("messages");
         ObjectNode system = messages.addObject();
         system.put("role", "system");
-        system.put("content", "只返回 JSON，不要 Markdown。字段：date, amount, merchant, type, category, confidence, rawText。type 只能是收入或支出，付款/消费/转给别人是支出，工资/奖金/报销/退款/收到转账是收入，收入或支出不确定时用支出。merchant 取收款方/商户/对方账户/商品说明/备注；拼音、英文、昵称原样返回，确实看不清才用未知商家。category 限：餐饮、交通、购物、住房、医疗、娱乐、生活缴费、转账、收入、其他、未分类。金额/商户/日期不确定时 confidence<=0.74。");
+        system.put("content", systemPrompt(strictReview));
 
         ObjectNode user = messages.addObject();
         user.put("role", "user");
         ArrayNode content = user.putArray("content");
         ObjectNode text = content.addObject();
         text.put("type", "text");
-        text.put("text", "提取支付截图账单。日期 YYYY-MM-DD；金额只返回数字。若收款方是拼音/英文/昵称，如 ru zi ni sa，原样填入 merchant。");
+        text.put("text", userPrompt(strictReview));
         ObjectNode image = content.addObject();
         image.put("type", "image_url");
         ObjectNode imageUrl = image.putObject("image_url");
@@ -129,6 +129,46 @@ public class CloudVisionServiceImpl implements AIService {
             logger.warn("Cloud vision JSON parsing failed. contentSnippet={}", abbreviate(json), exception);
             return reviewBill("视觉模型返回 JSON 解析失败。", json);
         }
+    }
+
+    private Bill requestBill(HttpClient client, String apiKey, byte[] imageData, boolean strictReview) throws Exception {
+        HttpRequest request = HttpRequest.newBuilder(endpoint)
+                .timeout(Duration.ofMillis(timeoutMs()))
+                .header("Authorization", "Bearer " + apiKey)
+                .header("Content-Type", "application/json")
+                .POST(HttpRequest.BodyPublishers.ofString(buildVisionRequest(imageData, strictReview)))
+                .build();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if (response.statusCode() < 200 || response.statusCode() >= 300) {
+            logger.warn("Cloud vision API returned status {} for endpoint {} model {} bodySnippet {}", response.statusCode(), endpoint, model(), abbreviate(response.body()));
+            return reviewBill("云端视觉 API 返回非成功状态：" + response.statusCode(), "{\"provider\":\"cloud\",\"status\":" + response.statusCode() + "}");
+        }
+        return parseBillJson(extractContent(response.body()));
+    }
+
+    private boolean shouldRetryWithStrictPrompt(Bill bill) {
+        return bill.amount().compareTo(BigDecimal.ZERO) <= 0
+                || bill.confidence() < 0.5
+                || "未知商家".equals(bill.merchant())
+                || "待复核商家".equals(bill.merchant());
+    }
+
+    private String systemPrompt(boolean strictReview) {
+        String prefix = strictReview ? "严格复核模式。" : "";
+        return prefix + "只返回 JSON，不要 Markdown。字段：date, amount, merchant, type, category, confidence, rawText。"
+                + "处理复杂截图时，先在整张图中定位真正的交易/订单/账单区域，再提取字段。"
+                + "多金额优先级：实付金额、支付金额、付款金额、订单金额、消费金额、本次支出、退款金额；忽略红包、奖励、优惠券、余额、额度、广告、按钮。"
+                + "merchant 优先取收款方、商户、店铺、对方账户、商品说明、备注；拼音、英文、昵称原样返回，确实看不清才用未知商家。"
+                + "date 优先取交易时间、支付时间、下单时间、账单时间；日期 YYYY-MM-DD。"
+                + "type 只能是收入或支出，付款/消费/转给别人是支出，工资/奖金/报销/退款/收到转账是收入，收入或支出不确定时用支出。"
+                + "月账单/周账单/分期账单如果没有单笔商户，就把 merchant 填账单产品名，如美团月付/花呗/白条，并把 rawText 标明账单汇总。"
+                + "category 限：餐饮、交通、购物、住房、医疗、娱乐、生活缴费、转账、收入、其他、未分类。金额/商户/日期不确定时 confidence<=0.74。";
+    }
+
+    private String userPrompt(boolean strictReview) {
+        String prefix = strictReview ? "严格复核模式：上一次识别低置信度或金额为 0，请重新检查复杂截图中的真实交易区域。" : "";
+        return prefix + "提取支付截图账单。日期 YYYY-MM-DD；金额只返回数字。若收款方是拼音/英文/昵称，如 ru zi ni sa，原样填入 merchant。"
+                + "如果截图包含奖励、红包、广告、余额、额度、按钮，不要把它们当成交易金额或商户。";
     }
 
     private String extractContent(String responseBody) throws Exception {

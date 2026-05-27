@@ -13,6 +13,7 @@ import java.net.InetSocketAddress;
 import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -84,7 +85,7 @@ class CloudVisionServiceImplTest {
         String requestBody = service.buildVisionRequest("image-bytes".getBytes());
 
         assertThat(requestBody).contains("\"model\":\"qwen3.6-flash\"");
-        assertThat(requestBody).contains("\"max_tokens\":220");
+        assertThat(requestBody).contains("\"max_tokens\":300");
         assertThat(requestBody).contains("type");
     }
 
@@ -104,6 +105,69 @@ class CloudVisionServiceImplTest {
         assertThat(requestBody).contains("未知商家");
         assertThat(requestBody).contains("confidence<=0.74");
         assertThat(requestBody).contains("餐饮、交通、购物、住房、医疗、娱乐、生活缴费、转账、收入、其他、未分类");
+    }
+
+    @Test
+    void includesComplexScreenshotGuidanceInRequestBody() {
+        CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
+                "",
+                new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500, "https://example.com/v1/chat/completions", "qwen3.6-flash"),
+                new AutoBookkeeperProperties.Privacy(false, true)
+        ));
+
+        String requestBody = service.buildVisionRequest("image-bytes".getBytes());
+
+        assertThat(requestBody).contains("复杂截图");
+        assertThat(requestBody).contains("忽略红包、奖励、优惠券、余额、额度、广告、按钮");
+        assertThat(requestBody).contains("实付金额");
+        assertThat(requestBody).contains("支付金额");
+        assertThat(requestBody).contains("收款方");
+        assertThat(requestBody).contains("交易时间");
+        assertThat(requestBody).contains("月账单");
+    }
+
+    @Test
+    void retriesWithStrictPromptWhenFirstVisionResultNeedsReview() throws IOException {
+        AtomicInteger requestCount = new AtomicInteger();
+        AtomicReference<String> secondRequestBody = new AtomicReference<>("");
+        HttpServer server = HttpServer.create(new InetSocketAddress(0), 0);
+        server.createContext("/v1/chat/completions", exchange -> {
+            int count = requestCount.incrementAndGet();
+            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8);
+            byte[] response;
+            if (count == 1) {
+                response = """
+                        {"choices":[{"message":{"content":"{\\"date\\":\\"2026-05-25\\",\\"amount\\":\\"0\\",\\"merchant\\":\\"未知商家\\",\\"category\\":\\"未分类\\",\\"confidence\\":0.2,\\"rawText\\":\\"复杂截图识别不确定\\"}"}}]}
+                        """.getBytes(StandardCharsets.UTF_8);
+            } else {
+                secondRequestBody.set(body);
+                response = """
+                        {"choices":[{"message":{"content":"{\\"date\\":\\"2026-05-25\\",\\"amount\\":\\"50.21\\",\\"merchant\\":\\"美团月付\\",\\"category\\":\\"生活缴费\\",\\"confidence\\":0.82,\\"rawText\\":\\"美团月付 本周消费 50.21\\"}"}}]}
+                        """.getBytes(StandardCharsets.UTF_8);
+            }
+            exchange.sendResponseHeaders(200, response.length);
+            exchange.getResponseBody().write(response);
+            exchange.close();
+        });
+        server.start();
+        try {
+            URI endpoint = URI.create("http://localhost:" + server.getAddress().getPort() + "/v1/chat/completions");
+            CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
+                    "",
+                    new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500),
+                    new AutoBookkeeperProperties.Privacy(false, true)
+            ), endpoint);
+
+            Bill bill = service.extractBillFromImage("image-bytes".getBytes());
+
+            assertThat(requestCount.get()).isEqualTo(2);
+            assertThat(secondRequestBody.get()).contains("严格复核模式");
+            assertThat(bill.amount()).isEqualByComparingTo(new BigDecimal("50.21"));
+            assertThat(bill.merchant()).isEqualTo("美团月付");
+            assertThat(bill.needsReview()).isFalse();
+        } finally {
+            server.stop(0);
+        }
     }
 
     @Test
