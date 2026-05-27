@@ -8,6 +8,7 @@ import com.autobookkeeper.domain.TransactionType;
 import com.autobookkeeper.repository.TransactionRepository;
 import com.autobookkeeper.security.ApiTokenFilter;
 import com.autobookkeeper.security.AuthenticatedUser;
+import com.autobookkeeper.security.UserTokenResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -29,6 +30,7 @@ import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 import static org.springframework.http.HttpStatus.BAD_REQUEST;
 import static org.springframework.http.HttpStatus.NOT_FOUND;
@@ -52,26 +54,17 @@ public class TransactionController {
         String ownerKey = authenticatedUser(request).ownerKey();
         if (month != null && !month.isBlank()) {
             YearMonth yearMonth = parseMonth(month);
-            return transactionRepository.findAllByOwnerKeyAndTransactionDateGreaterThanEqualAndTransactionDateLessThanOrderByTransactionDateDescCreatedAtDesc(
-                            ownerKey,
-                            yearMonth.atDay(1),
-                            yearMonth.plusMonths(1).atDay(1),
-                            pageRequest
-                    )
+            return findPage(ownerKey, yearMonth, pageRequest)
                     .map(TransactionResponse::from);
         }
-        return transactionRepository.findAllByOwnerKeyOrderByTransactionDateDescCreatedAtDesc(ownerKey, pageRequest)
+        return findPage(ownerKey, pageRequest)
                 .map(TransactionResponse::from);
     }
 
     @GetMapping("/summary")
     public MonthlySummaryResponse summary(@RequestParam String month, HttpServletRequest request) {
         YearMonth yearMonth = parseMonth(month);
-        List<Transaction> transactions = transactionRepository.findAllByOwnerKeyAndTransactionDateGreaterThanEqualAndTransactionDateLessThan(
-                authenticatedUser(request).ownerKey(),
-                yearMonth.atDay(1),
-                yearMonth.plusMonths(1).atDay(1)
-        );
+        List<Transaction> transactions = findAll(authenticatedUser(request).ownerKey(), yearMonth);
         BigDecimal incomeTotal = transactions.stream()
                 .filter(transaction -> transaction.getType() == TransactionType.INCOME)
                 .map(Transaction::getAmount)
@@ -107,14 +100,14 @@ public class TransactionController {
 
     @GetMapping("/{id}")
     public TransactionResponse get(@PathVariable Long id, HttpServletRequest request) {
-        return transactionRepository.findByIdAndOwnerKey(id, authenticatedUser(request).ownerKey())
+        return findById(id, authenticatedUser(request).ownerKey())
                 .map(TransactionResponse::from)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Transaction not found"));
     }
 
     @PatchMapping("/{id}")
     public TransactionResponse update(@PathVariable Long id, @RequestBody UpdateTransactionRequest request, HttpServletRequest httpRequest) {
-        return transactionRepository.findByIdAndOwnerKey(id, authenticatedUser(httpRequest).ownerKey())
+        return findById(id, authenticatedUser(httpRequest).ownerKey())
                 .map(transaction -> {
                     transaction.update(request.transactionDate(), request.amount(), request.merchant(), TransactionType.fromLabel(request.type()), request.category(), request.status());
                     return TransactionResponse.from(transactionRepository.save(transaction));
@@ -125,7 +118,7 @@ public class TransactionController {
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id, HttpServletRequest request) {
         String ownerKey = authenticatedUser(request).ownerKey();
-        if (!transactionRepository.existsByIdAndOwnerKey(id, ownerKey)) {
+        if (!existsById(id, ownerKey)) {
             throw new ResponseStatusException(NOT_FOUND, "Transaction not found");
         }
         transactionRepository.deleteById(id);
@@ -138,5 +131,49 @@ public class TransactionController {
             return authenticatedUser;
         }
         return new AuthenticatedUser("default");
+    }
+
+    private Page<Transaction> findPage(String ownerKey, PageRequest pageRequest) {
+        if (UserTokenResolver.DEFAULT_OWNER_KEY.equals(ownerKey)) {
+            return transactionRepository.findAllVisibleToDefaultOwner(pageRequest);
+        }
+        return transactionRepository.findAllByOwnerKeyOrderByTransactionDateDescCreatedAtDesc(ownerKey, pageRequest);
+    }
+
+    private Page<Transaction> findPage(String ownerKey, YearMonth yearMonth, PageRequest pageRequest) {
+        if (UserTokenResolver.DEFAULT_OWNER_KEY.equals(ownerKey)) {
+            return transactionRepository.findAllVisibleToDefaultOwnerBetween(
+                    yearMonth.atDay(1),
+                    yearMonth.plusMonths(1).atDay(1),
+                    pageRequest
+            );
+        }
+        return transactionRepository.findAllByOwnerKeyAndTransactionDateGreaterThanEqualAndTransactionDateLessThanOrderByTransactionDateDescCreatedAtDesc(
+                ownerKey,
+                yearMonth.atDay(1),
+                yearMonth.plusMonths(1).atDay(1),
+                pageRequest
+        );
+    }
+
+    private List<Transaction> findAll(String ownerKey, YearMonth yearMonth) {
+        if (UserTokenResolver.DEFAULT_OWNER_KEY.equals(ownerKey)) {
+            return transactionRepository.findAllVisibleToDefaultOwnerBetween(yearMonth.atDay(1), yearMonth.plusMonths(1).atDay(1));
+        }
+        return transactionRepository.findAllByOwnerKeyAndTransactionDateGreaterThanEqualAndTransactionDateLessThan(ownerKey, yearMonth.atDay(1), yearMonth.plusMonths(1).atDay(1));
+    }
+
+    private Optional<Transaction> findById(Long id, String ownerKey) {
+        if (UserTokenResolver.DEFAULT_OWNER_KEY.equals(ownerKey)) {
+            return transactionRepository.findByIdVisibleToDefaultOwner(id);
+        }
+        return transactionRepository.findByIdAndOwnerKey(id, ownerKey);
+    }
+
+    private boolean existsById(Long id, String ownerKey) {
+        if (UserTokenResolver.DEFAULT_OWNER_KEY.equals(ownerKey)) {
+            return transactionRepository.existsByIdVisibleToDefaultOwner(id);
+        }
+        return transactionRepository.existsByIdAndOwnerKey(id, ownerKey);
     }
 }

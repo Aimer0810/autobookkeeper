@@ -9,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -37,6 +38,9 @@ class TransactionControllerTest {
 
     @Autowired
     private TransactionRepository transactionRepository;
+
+    @Autowired
+    private JdbcTemplate jdbcTemplate;
 
     @BeforeEach
     void cleanDatabase() {
@@ -332,6 +336,40 @@ class TransactionControllerTest {
                         .header("X-API-Token", "alice-token"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.merchant").value("Alice Merchant"));
+    }
+
+    @Test
+    void defaultTokenCanReadLegacyTransactionsWithoutOwnerKey() throws Exception {
+        Transaction legacyTransaction = transactionRepository.save(new Transaction(
+                LocalDate.of(2026, 5, 2),
+                new BigDecimal("33.00"),
+                "Legacy Store",
+                TransactionType.EXPENSE,
+                "餐饮",
+                "raw text",
+                "{}",
+                0.95,
+                ProcessingStatus.PROCESSED,
+                "ios-shortcuts",
+                Instant.parse("2026-05-02T12:00:00Z")
+        ));
+        jdbcTemplate.update("update transactions set owner_key = null where id = ?", legacyTransaction.getId());
+
+        mockMvc.perform(get("/api/transactions?month=2026-05")
+                        .header("X-API-Token", "test-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].merchant").value("Legacy Store"));
+
+        mockMvc.perform(get("/api/transactions/summary?month=2026-05")
+                        .header("X-API-Token", "test-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.expenseTotal").value(33.00));
+
+        mockMvc.perform(get("/api/transactions/" + legacyTransaction.getId())
+                        .header("X-API-Token", "test-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.merchant").value("Legacy Store"));
     }
 
     @Test
