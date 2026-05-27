@@ -19,7 +19,7 @@ SPRING_PROFILES_ACTIVE=cloud
 AUTOBOOKKEEPER_API_TOKEN=<long-random-token>
 VISION_API_KEY={{API_KEY}}
 VISION_API_ENDPOINT=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
-VISION_MODEL=qwen3.6-flash
+VISION_MODEL=qwen3-vl-flash
 AUTOBOOKKEEPER_AI_TIMEOUT_MS=30000
 DATABASE_URL=jdbc:postgresql://<host>:<port>/<database>
 DATABASE_USERNAME=<username>
@@ -34,7 +34,7 @@ DATABASE_PASSWORD=<password>
 
 Render Blueprint 已提供 `render.yaml`，会自动创建 Web Service 和 PostgreSQL 数据库，并将数据库 `connectionString` 注入到 `DATABASE_URL`。如果平台提供的是 `postgresql://...`，Docker 入口脚本会在启动时转换为 `jdbc:postgresql://...`。
 
-如果使用阿里云百炼 OpenAI 兼容接口，将 `VISION_API_ENDPOINT` 设置为 `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`，并将 `VISION_MODEL` 设置为你的百炼视觉模型名，例如 `qwen3.6-flash`。
+如果使用阿里云百炼 OpenAI 兼容接口，将 `VISION_API_ENDPOINT` 设置为 `https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`，并将 `VISION_MODEL` 设置为你的百炼视觉模型名，例如 `qwen3-vl-flash`。
 
 ## 安全要求
 

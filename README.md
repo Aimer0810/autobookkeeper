@@ -62,7 +62,7 @@ $env:VISION_API_KEY="your-dashscope-api-key"
 
 ```text
 VISION_API_ENDPOINT=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
-VISION_MODEL=qwen3.6-flash
+VISION_MODEL=qwen3-vl-flash
 AUTOBOOKKEEPER_AI_TIMEOUT_MS=30000
 ```
 
@@ -81,7 +81,7 @@ Invoke-RestMethod http://localhost:8080/api/health | ConvertTo-Json -Depth 5
   "ai": {
     "apiKeyConfigured": true,
     "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-    "model": "qwen3.6-flash",
+    "model": "qwen3-vl-flash",
     "timeoutMs": 30000
   }
 }
@@ -93,7 +93,7 @@ Invoke-RestMethod http://localhost:8080/api/health | ConvertTo-Json -Depth 5
 AUTOBOOKKEEPER_API_TOKEN=your-long-random-token
 VISION_API_KEY={{API_KEY}}
 VISION_API_ENDPOINT=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
-VISION_MODEL=qwen3.6-flash
+VISION_MODEL=qwen3-vl-flash
 AUTOBOOKKEEPER_AI_TIMEOUT_MS=30000
 SPRING_PROFILES_ACTIVE=cloud
 DATABASE_URL=jdbc:postgresql://host:5432/autobookkeeper
@@ -107,7 +107,7 @@ DATABASE_PASSWORD=your-password
 
 ```text
 VISION_API_ENDPOINT=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
-VISION_MODEL=qwen3.6-flash
+VISION_MODEL=qwen3-vl-flash
 ```
 
 ## Docker 部署

@@ -30,7 +30,7 @@ class CompositeAIServiceTest {
         try {
             AutoBookkeeperProperties properties = new AutoBookkeeperProperties(
                     "",
-                    new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500, "https://example.com/v1/chat/completions", "qwen3.6-flash"),
+                    new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500, "https://example.com/v1/chat/completions", "qwen3-vl-flash"),
                     new AutoBookkeeperProperties.Privacy(false, true)
             );
             URI endpoint = URI.create("http://localhost:" + server.getAddress().getPort() + "/v1/chat/completions");

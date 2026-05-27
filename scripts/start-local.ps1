@@ -16,7 +16,7 @@ if (-not (Test-Path $jarPath)) {
 }
 
 $endpoint = if ([string]::IsNullOrWhiteSpace($env:VISION_API_ENDPOINT)) { 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions' } else { $env:VISION_API_ENDPOINT }
-$model = if ([string]::IsNullOrWhiteSpace($env:VISION_MODEL)) { 'qwen3.6-flash' } else { $env:VISION_MODEL }
+$model = if ([string]::IsNullOrWhiteSpace($env:VISION_MODEL)) { 'qwen3-vl-flash' } else { $env:VISION_MODEL }
 $timeoutMs = if ([string]::IsNullOrWhiteSpace($env:AUTOBOOKKEEPER_AI_TIMEOUT_MS)) { '30000' } else { $env:AUTOBOOKKEEPER_AI_TIMEOUT_MS }
 
 Write-Output 'Starting AutoBookkeeper locally...'

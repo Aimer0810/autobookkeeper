@@ -18,7 +18,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "autobookkeeper.version=0.1.0-test",
         "autobookkeeper.ai.api-key=test-key",
         "autobookkeeper.ai.endpoint=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions",
-        "autobookkeeper.ai.model=qwen3.6-flash",
+        "autobookkeeper.ai.model=qwen3-vl-flash",
         "autobookkeeper.ai.timeout-ms=30000",
         "spring.datasource.url=jdbc:h2:mem:health-controller-test;MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE",
         "spring.datasource.username=sa",
@@ -39,7 +39,7 @@ class HealthControllerTest {
                 .andExpect(jsonPath("$.profiles[0]").value("local"))
                 .andExpect(jsonPath("$.ai.apiKeyConfigured").value(true))
                 .andExpect(jsonPath("$.ai.endpoint").value("https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"))
-                .andExpect(jsonPath("$.ai.model").value("qwen3.6-flash"))
+                .andExpect(jsonPath("$.ai.model").value("qwen3-vl-flash"))
                 .andExpect(jsonPath("$.ai.timeoutMs").value(30000));
     }
 }

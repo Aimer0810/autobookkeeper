@@ -22,11 +22,11 @@ public record AutoBookkeeperProperties(
 
     public record Ai(String provider, String apiKey, int timeoutMs, String endpoint, String model) {
         public Ai(String provider, String apiKey, int timeoutMs) {
-            this(provider, apiKey, timeoutMs, "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", "qwen3.6-flash");
+            this(provider, apiKey, timeoutMs, "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions", "qwen3-vl-flash");
         }
 
         public Ai(String provider, String apiKey, int timeoutMs, String endpoint) {
-            this(provider, apiKey, timeoutMs, endpoint, "qwen3.6-flash");
+            this(provider, apiKey, timeoutMs, endpoint, "qwen3-vl-flash");
         }
     }
 

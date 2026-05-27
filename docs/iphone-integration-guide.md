@@ -113,4 +113,4 @@ Body：
 - 云端部署必须使用 HTTPS。
 - Token 应使用长随机字符串。
 - 如果 `VISION_API_KEY` 仍是 `{{API_KEY}}`，后端不会把截图发送给外部 AI 服务，会返回需要复核的降级结果。
-- 使用阿里云百炼 OpenAI 兼容接口时，本地可设置 `VISION_API_ENDPOINT=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`，并把 `VISION_MODEL` 设置为你的百炼视觉模型名，例如 `qwen3.6-flash`。
+- 使用阿里云百炼 OpenAI 兼容接口时，本地可设置 `VISION_API_ENDPOINT=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions`，并把 `VISION_MODEL` 设置为你的百炼视觉模型名，例如 `qwen3-vl-flash`。

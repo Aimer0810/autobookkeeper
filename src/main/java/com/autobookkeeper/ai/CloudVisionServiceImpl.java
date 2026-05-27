@@ -209,7 +209,7 @@ public class CloudVisionServiceImpl implements AIService {
 
     private static String configuredModel(AutoBookkeeperProperties properties) {
         return properties.ai() == null || properties.ai().model() == null || properties.ai().model().isBlank()
-                ? "qwen3.6-flash"
+                ? "qwen3-vl-flash"
                 : properties.ai().model();
     }
 

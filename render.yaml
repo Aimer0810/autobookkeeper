@@ -15,7 +15,7 @@ services:
       - key: VISION_API_ENDPOINT
         value: https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
       - key: VISION_MODEL
-        value: qwen3.6-flash
+        value: qwen3-vl-flash
       - key: AUTOBOOKKEEPER_AI_TIMEOUT_MS
         value: "30000"
       - key: DATABASE_URL

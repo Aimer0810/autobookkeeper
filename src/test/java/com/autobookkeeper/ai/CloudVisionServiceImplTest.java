@@ -78,13 +78,13 @@ class CloudVisionServiceImplTest {
     void usesConfiguredVisionModelInRequestBody() {
         CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
                 "",
-                new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500, "https://example.com/v1/chat/completions", "qwen3.6-flash"),
+                new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500, "https://example.com/v1/chat/completions", "qwen3-vl-flash"),
                 new AutoBookkeeperProperties.Privacy(false, true)
         ));
 
         String requestBody = service.buildVisionRequest("image-bytes".getBytes());
 
-        assertThat(requestBody).contains("\"model\":\"qwen3.6-flash\"");
+        assertThat(requestBody).contains("\"model\":\"qwen3-vl-flash\"");
         assertThat(requestBody).contains("\"max_tokens\":300");
         assertThat(requestBody).contains("type");
     }
@@ -93,7 +93,7 @@ class CloudVisionServiceImplTest {
     void includesAccuracyGuidanceForChineseMerchantAndReviewConfidence() {
         CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
                 "",
-                new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500, "https://example.com/v1/chat/completions", "qwen3.6-flash"),
+                new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500, "https://example.com/v1/chat/completions", "qwen3-vl-flash"),
                 new AutoBookkeeperProperties.Privacy(false, true)
         ));
 
@@ -111,7 +111,7 @@ class CloudVisionServiceImplTest {
     void includesComplexScreenshotGuidanceInRequestBody() {
         CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
                 "",
-                new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500, "https://example.com/v1/chat/completions", "qwen3.6-flash"),
+                new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500, "https://example.com/v1/chat/completions", "qwen3-vl-flash"),
                 new AutoBookkeeperProperties.Privacy(false, true)
         ));
 
@@ -190,7 +190,7 @@ class CloudVisionServiceImplTest {
             MockEnvironment environment = new MockEnvironment()
                     .withProperty("autobookkeeper.ai.api-key", "environment-test-key")
                     .withProperty("autobookkeeper.ai.endpoint", "http://localhost:" + server.getAddress().getPort() + "/v1/chat/completions")
-                    .withProperty("autobookkeeper.ai.model", "qwen3.6-flash")
+                    .withProperty("autobookkeeper.ai.model", "qwen3-vl-flash")
                     .withProperty("autobookkeeper.ai.timeout-ms", "30000");
             CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
                     "",
@@ -201,7 +201,7 @@ class CloudVisionServiceImplTest {
             Bill bill = service.extractBillFromImage("image-bytes".getBytes());
 
             assertThat(authorization.get()).isEqualTo("Bearer environment-test-key");
-            assertThat(requestBody.get()).contains("\"model\":\"qwen3.6-flash\"");
+            assertThat(requestBody.get()).contains("\"model\":\"qwen3-vl-flash\"");
             assertThat(bill.amount()).isEqualByComparingTo(new BigDecimal("18.60"));
             assertThat(bill.needsReview()).isFalse();
         } finally {
