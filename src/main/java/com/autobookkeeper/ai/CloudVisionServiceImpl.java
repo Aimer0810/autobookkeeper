@@ -79,7 +79,7 @@ public class CloudVisionServiceImpl implements AIService {
             return parseBillJson(extractContent(response.body()));
         } catch (Exception exception) {
             logger.warn("Cloud vision API call failed for endpoint {} model {}", endpoint, model(), exception);
-            return reviewBill("云端视觉 API 调用失败，请人工复核。", "{\"provider\":\"cloud\",\"error\":\"vision-api-call-failed\"}");
+            return reviewBill("云端视觉 API 调用失败：" + exception.getClass().getSimpleName() + " " + abbreviate(exception.getMessage()), "{\"provider\":\"cloud\",\"error\":\"vision-api-call-failed\"}");
         }
     }
 
