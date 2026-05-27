@@ -23,6 +23,9 @@
         .status.processed { background: #ecfdf5; color: #047857; }
         .actions { text-align: right; }
         .notice { padding: 10px 12px; border-radius: 12px; background: #fef2f2; color: #b91c1c; margin-bottom: 12px; display: none; }
+        .toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 10px; }
+        .toolbar label { display: inline-flex; gap: 6px; align-items: center; color: #475569; font-size: 14px; font-weight: 700; }
+        .toolbar input { width: auto; }
         .summary-total { font-size: 32px; font-weight: 900; color: #0f766e; margin: 8px 0; }
         .summary-categories { display: flex; flex-wrap: wrap; gap: 8px; }
         .summary-chip { background: #f1f5f9; border-radius: 999px; padding: 6px 10px; color: #334155; font-size: 13px; }
@@ -60,6 +63,12 @@
     <section class="card">
         <h2>最近账目</h2>
         <div id="notice" class="notice"></div>
+        <div class="toolbar">
+            <label>
+                <input id="reviewOnly" type="checkbox" onchange="renderTransactions()">
+                只看需复核
+            </label>
+        </div>
         <div id="transactions">加载中...</div>
     </section>
 </main>
@@ -123,6 +132,7 @@
     const tokenInput = document.getElementById('token');
     tokenInput.value = localStorage.getItem('autobookkeeper-token') || '';
     let editingTransactionId = null;
+    let latestTransactions = [];
 
     function saveToken() {
         localStorage.setItem('autobookkeeper-token', tokenInput.value);
@@ -166,12 +176,23 @@
             const response = await fetch('/api/transactions?page=0&size=50', { headers });
             if (!response.ok) throw new Error(response.status === 401 ? 'Token 无效或未填写。' : '加载账目失败。');
             const data = await response.json();
-            const rows = data.content || [];
-            if (rows.length === 0) {
-                container.innerHTML = '<p class="meta">暂无账目。请先通过 iPhone 快捷指令上传截图。</p>';
-                return;
-            }
-            container.innerHTML = rows.map(item => `
+            latestTransactions = data.content || [];
+            renderTransactions();
+        } catch (error) {
+            container.innerHTML = '<p class="meta">加载失败，请检查后端服务和网络。</p>';
+            showNotice(error.message);
+        }
+    }
+
+    function renderTransactions() {
+        const container = document.getElementById('transactions');
+        const reviewOnly = document.getElementById('reviewOnly').checked;
+        const rows = reviewOnly ? latestTransactions.filter(item => item.status === 'NEEDS_REVIEW') : latestTransactions;
+        if (rows.length === 0) {
+            container.innerHTML = reviewOnly ? '<p class="meta">暂无需复核账目。</p>' : '<p class="meta">暂无账目。请先通过 iPhone 快捷指令上传截图。</p>';
+            return;
+        }
+        container.innerHTML = rows.map(item => `
                 <div class="row">
                     <div>
                         <div class="merchant">${escapeHtml(item.merchant)}</div>
@@ -186,10 +207,6 @@
                     </div>
                 </div>
             `).join('');
-        } catch (error) {
-            container.innerHTML = '<p class="meta">加载失败，请检查后端服务和网络。</p>';
-            showNotice(error.message);
-        }
     }
 
     async function markProcessed(id) {
