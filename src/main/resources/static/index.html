@@ -91,20 +91,20 @@
         <div id="notice" class="notice"></div>
         <div id="loginPanel" class="auth-panel">
             <label>用户名
-                <input id="loginUsername" type="text" autocomplete="username">
+                <input id="loginUsername" type="text" autocomplete="username" minlength="3">
             </label>
             <label>密码
-                <input id="loginPassword" type="password" autocomplete="current-password">
+                <input id="loginPassword" type="password" autocomplete="current-password" minlength="6">
             </label>
             <button onclick="loginAccount()">登录</button>
             <p class="auth-switch meta">还没有账号？<a onclick="showRegister()">去注册</a></p>
         </div>
         <div id="registerPanel" class="auth-panel" style="display:none">
             <label>用户名
-                <input id="registerUsername" type="text" autocomplete="username">
+                <input id="registerUsername" type="text" autocomplete="username" minlength="3">
             </label>
             <label>密码
-                <input id="registerPassword" type="password" autocomplete="new-password">
+                <input id="registerPassword" type="password" autocomplete="new-password" minlength="6">
             </label>
             <label>邀请码
                 <input id="registerInviteCode" type="password">
@@ -276,7 +276,7 @@
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
             });
-            if (!response.ok) throw new Error(response.status === 401 ? '用户名或密码错误。' : response.status === 403 ? '邀请码错误。' : response.status === 409 ? '用户名已存在。' : '账号操作失败。');
+            if (!response.ok) throw new Error(response.status === 400 ? '用户名至少 3 位，密码至少 6 位。' : response.status === 401 ? '用户名或密码错误。' : response.status === 403 ? '邀请码错误。' : response.status === 409 ? '用户名已存在。' : '账号操作失败。');
             const data = await response.json();
             localStorage.setItem('autobookkeeper-token', data.token);
             localStorage.setItem('autobookkeeper-username', data.username);
