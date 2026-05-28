@@ -5,128 +5,427 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AutoBookkeeper</title>
     <style>
-        body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: radial-gradient(circle at top left, #dbeafe, transparent 32%), #f6f7fb; color: #172033; }
-        header { padding: 28px 18px 46px; background: linear-gradient(135deg, #1d4ed8, #06b6d4); color: white; box-shadow: 0 18px 45px rgba(29, 78, 216, .22); }
-        header h1 { margin: 0; }
-        header p { margin-bottom: 0; opacity: .9; }
-        main { max-width: 1040px; margin: -28px auto 0; padding: 18px; }
-        .card { background: rgba(255, 255, 255, .96); border: 1px solid rgba(226, 232, 240, .8); border-radius: 22px; box-shadow: 0 18px 45px rgba(15, 23, 42, .08); padding: 18px; margin-bottom: 16px; }
-        input, select { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #d7dce8; border-radius: 12px; }
-        button { margin-top: 10px; padding: 12px 16px; border: 0; border-radius: 12px; background: #1d4ed8; color: white; font-weight: 700; cursor: pointer; }
-        button.secondary { background: #f97316; }
-        button.danger { background: #dc2626; margin-left: 6px; }
-        button.muted { background: #64748b; margin-left: 6px; }
-        .row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; border-bottom: 1px solid #edf0f7; padding: 12px 0; }
-        .merchant { font-weight: 700; }
-        .meta { color: #64748b; font-size: 13px; margin-top: 4px; }
-        .amount { font-weight: 800; color: #0f766e; }
-        .amount.income { color: #047857; }
-        .amount.expense { color: #dc2626; }
-        .summary-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 10px 0 12px; }
-        .summary-box { border-radius: 18px; background: linear-gradient(180deg, #f8fafc, #eef2ff); padding: 14px; border: 1px solid #e2e8f0; }
-        .summary-label { color: #64748b; font-size: 12px; font-weight: 700; }
-        .summary-value { font-size: 22px; font-weight: 900; margin-top: 4px; }
-        .summary-value.income { color: #047857; }
-        .summary-value.expense { color: #dc2626; }
-        .summary-value.balance { color: #1d4ed8; }
-        .status { display: inline-block; padding: 3px 8px; border-radius: 999px; background: #eef2ff; color: #3730a3; font-size: 12px; }
-        .status.review { background: #fff7ed; color: #c2410c; }
-        .status.processed { background: #ecfdf5; color: #047857; }
-        .actions { text-align: right; }
-        .notice { padding: 10px 12px; border-radius: 12px; background: #fef2f2; color: #b91c1c; margin-bottom: 12px; display: none; }
-        .toolbar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; margin-bottom: 10px; }
-        .toolbar label { display: inline-flex; gap: 6px; align-items: center; color: #475569; font-size: 14px; font-weight: 700; }
-        .toolbar input { width: auto; }
-        .filter-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 12px; margin-bottom: 12px; }
-        .filter-grid label { font-size: 13px; color: #475569; font-weight: 700; }
-        .filter-grid input, .filter-grid select { margin-top: 6px; }
-        .quick-category { width: 120px; padding: 8px; margin: 0 0 8px 6px; }
-        .summary-total { font-size: 32px; font-weight: 900; color: #0f766e; margin: 8px 0; }
-        .summary-categories { display: flex; flex-wrap: wrap; gap: 8px; }
-        .summary-chip { background: #f1f5f9; border-radius: 999px; padding: 6px 10px; color: #334155; font-size: 13px; }
-        .modal-backdrop { position: fixed; inset: 0; background: rgba(15, 23, 42, .45); display: none; align-items: center; justify-content: center; padding: 18px; }
-        .modal { width: min(520px, 100%); background: white; border-radius: 18px; box-shadow: 0 24px 70px rgba(15, 23, 42, .24); padding: 18px; }
-        .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .modal-grid label { font-size: 13px; color: #475569; font-weight: 700; }
-        .modal-grid input, .modal-grid select { margin-top: 6px; width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid #d7dce8; border-radius: 12px; }
-        .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px; }
-        .detail-block { margin-top: 12px; }
-        .detail-block h3 { margin: 0 0 6px; font-size: 14px; color: #334155; }
-        .detail-pre { max-height: 220px; overflow: auto; white-space: pre-wrap; word-break: break-word; background: #0f172a; color: #e2e8f0; border-radius: 12px; padding: 12px; font-size: 12px; line-height: 1.5; }
-        .auth-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .auth-panel { background: #f8fafc; border-radius: 16px; padding: 12px; }
-        .auth-panel h3 { margin: 0 0 10px; }
-        .auth-panel label { display: block; margin-top: 8px; font-size: 13px; color: #475569; font-weight: 700; }
-        .auth-panel input { margin-top: 6px; }
-        .token-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+        :root {
+            --bg: #f7f8fb;
+            --surface: #ffffff;
+            --surface-soft: #f9fafb;
+            --text: #09090b;
+            --muted: #667085;
+            --line: #e4e7ec;
+            --line-strong: #d0d5dd;
+            --primary: #2563eb;
+            --primary-dark: #1d4ed8;
+            --income: #047857;
+            --expense: #dc2626;
+            --warning: #b45309;
+            --shadow: 0 16px 40px rgba(16, 24, 40, .08);
+            --radius: 8px;
+        }
+
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            letter-spacing: 0;
+        }
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0 0 auto;
+            height: 260px;
+            background: linear-gradient(180deg, #eef4ff 0%, rgba(247, 248, 251, 0) 100%);
+            pointer-events: none;
+            z-index: -1;
+        }
+        header {
+            max-width: 1180px;
+            margin: 0 auto;
+            padding: 24px 20px 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+        .brand-mark {
+            width: 40px;
+            height: 40px;
+            border-radius: var(--radius);
+            display: grid;
+            place-items: center;
+            background: var(--text);
+            color: #fff;
+            font-weight: 900;
+            box-shadow: 0 10px 22px rgba(9, 9, 11, .16);
+        }
+        header h1 { margin: 0; font-size: 20px; line-height: 1.1; letter-spacing: 0; }
+        header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
+        .header-pill {
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            padding: 8px 12px;
+            color: #344054;
+            background: rgba(255, 255, 255, .78);
+            font-size: 13px;
+            white-space: nowrap;
+        }
+        main { max-width: 1180px; margin: 0 auto; padding: 12px 20px 40px; }
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 22px;
+            margin-bottom: 16px;
+        }
+        .muted-panel, .auth-panel, .locator-box, .migration-box {
+            background: var(--surface-soft);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px;
+        }
+        input, select {
+            width: 100%;
+            min-height: 42px;
+            padding: 10px 12px;
+            border: 1px solid var(--line-strong);
+            border-radius: var(--radius);
+            background: #fff;
+            color: var(--text);
+            font: inherit;
+            outline: none;
+            transition: border-color .18s ease, box-shadow .18s ease;
+        }
+        input:focus, select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, .14);
+        }
+        button {
+            min-height: 42px;
+            padding: 10px 14px;
+            border: 1px solid transparent;
+            border-radius: var(--radius);
+            background: var(--primary);
+            color: white;
+            font: inherit;
+            font-weight: 750;
+            cursor: pointer;
+            transition: background .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
+        }
+        button:hover { background: var(--primary-dark); box-shadow: 0 8px 18px rgba(37, 99, 235, .18); }
+        button:focus-visible { outline: 3px solid rgba(37, 99, 235, .24); outline-offset: 2px; }
+        button.secondary { background: #111827; }
+        button.secondary:hover { background: #030712; box-shadow: 0 8px 18px rgba(17, 24, 39, .16); }
+        button.danger { background: #fff; color: var(--expense); border-color: #fecaca; }
+        button.danger:hover { background: #fef2f2; box-shadow: none; }
+        button.muted { background: #fff; color: #344054; border-color: var(--line-strong); }
+        button.muted:hover { background: #f9fafb; box-shadow: none; }
+        label { color: #344054; font-size: 13px; font-weight: 700; }
+        label input, label select { margin-top: 7px; }
+        .meta { color: var(--muted); font-size: 13px; line-height: 1.5; }
+        .notice {
+            padding: 12px 14px;
+            border-radius: var(--radius);
+            background: #fff7ed;
+            color: #9a3412;
+            border: 1px solid #fed7aa;
+            margin: 14px 0;
+            display: none;
+        }
         .dashboard { display: none; }
-        .auth-switch { margin-top: 12px; }
-        .auth-switch a { color: #1d4ed8; cursor: pointer; font-weight: 700; }
-        .dashboard-hero { display: grid; grid-template-columns: 1fr auto; gap: 16px; align-items: start; }
-        .dashboard-hero h2 { margin: 0; font-size: 28px; }
-        .dashboard-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
-        .locator-box { margin-top: 16px; border: 1px solid #bfdbfe; background: linear-gradient(135deg, #eff6ff, #f8fafc); border-radius: 16px; padding: 14px; }
-        .locator-box h3 { margin: 0 0 8px; color: #1d4ed8; }
-        .locator-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
-        .migration-box { margin-top: 16px; border: 1px solid #fed7aa; background: #fff7ed; border-radius: 16px; padding: 14px; }
-        .migration-box h3 { margin: 0 0 8px; color: #9a3412; }
-        .migration-row { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; }
-        .section-title { display: flex; justify-content: space-between; gap: 12px; align-items: baseline; margin-bottom: 12px; }
-        .section-title h2 { margin: 0; }
-        .highlight-row { background: #fff7ed; border-color: #fb923c; border-radius: 16px; padding-left: 12px; padding-right: 12px; }
-        @media (max-width: 640px) {
-            .row { grid-template-columns: 1fr; }
-            .actions { text-align: left; }
-            .modal-grid { grid-template-columns: 1fr; }
-            .filter-grid { grid-template-columns: 1fr; }
-            .summary-grid { grid-template-columns: 1fr; }
-            .auth-grid { grid-template-columns: 1fr; }
-            .dashboard-hero { grid-template-columns: 1fr; }
+        .app-hero {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 18px;
+            align-items: start;
+        }
+        .eyebrow {
+            color: var(--primary);
+            font-size: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            margin-bottom: 8px;
+        }
+        .app-hero h2, #authTitle, .section-title h2, .modal h2 {
+            margin: 0;
+            font-size: 24px;
+            line-height: 1.2;
+            letter-spacing: 0;
+        }
+        .app-hero p { margin: 8px 0 0; max-width: 620px; }
+        .dashboard-actions, .modal-actions, .inline-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            justify-content: flex-end;
+            align-items: center;
+        }
+        .utility-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            margin-top: 18px;
+        }
+        .locator-box h3, .migration-box h3 {
+            margin: 0 0 6px;
+            color: #101828;
+            font-size: 15px;
+        }
+        .locator-row, .migration-row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 10px;
+            align-items: end;
+            margin-top: 12px;
+        }
+        .section-title {
+            display: flex;
+            justify-content: space-between;
+            gap: 14px;
+            align-items: flex-end;
+            margin-bottom: 16px;
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: 1fr 1.35fr 1fr 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+        .toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            gap: 12px;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+        .toolbar label { display: inline-flex; align-items: center; gap: 8px; }
+        .toolbar input { width: 16px; min-height: 16px; margin: 0; }
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 12px;
+            margin: 12px 0 14px;
+        }
+        .summary-box {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            background: #fff;
+            padding: 16px;
+        }
+        .summary-label { color: var(--muted); font-size: 12px; font-weight: 800; }
+        .summary-value { font-size: 28px; font-weight: 900; margin-top: 8px; line-height: 1; }
+        .summary-value.income { color: var(--income); }
+        .summary-value.expense { color: var(--expense); }
+        .summary-value.balance { color: var(--primary); }
+        .summary-categories { display: flex; flex-wrap: wrap; gap: 8px; }
+        .summary-chip {
+            background: #f2f4f7;
+            border: 1px solid #eaecf0;
+            border-radius: 999px;
+            padding: 7px 10px;
+            color: #344054;
+            font-size: 13px;
+        }
+        .transaction-list { display: grid; gap: 10px; }
+        .row {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto;
+            gap: 16px;
+            align-items: center;
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 14px;
+            background: #fff;
+        }
+        .merchant { font-weight: 850; color: #101828; }
+        .transaction-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 7px;
+            margin-top: 7px;
+            align-items: center;
+        }
+        .meta-item { color: var(--muted); font-size: 13px; }
+        .status {
+            display: inline-flex;
+            align-items: center;
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: #eef4ff;
+            color: #1d4ed8;
+            font-size: 12px;
+            font-weight: 800;
+        }
+        .status.review { background: #fffbeb; color: var(--warning); }
+        .status.processed { background: #ecfdf3; color: var(--income); }
+        .actions {
+            display: grid;
+            grid-template-columns: auto;
+            justify-items: end;
+            gap: 8px;
+            min-width: 320px;
+        }
+        .amount { font-size: 20px; font-weight: 900; color: var(--text); }
+        .amount.income { color: var(--income); }
+        .amount.expense { color: var(--expense); }
+        .row-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+        .quick-category { width: 132px; min-height: 38px; padding: 8px 10px; }
+        .highlight-row { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, .14); }
+        .auth-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 360px;
+            gap: 18px;
+            align-items: stretch;
+        }
+        .auth-copy {
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 22px;
+            background: #101828;
+            color: #fff;
+        }
+        .auth-copy h2 { margin: 0; font-size: 26px; }
+        .auth-copy p { color: #d0d5dd; line-height: 1.6; }
+        .auth-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 22px; }
+        .auth-metric { border-top: 1px solid rgba(255,255,255,.18); padding-top: 12px; }
+        .auth-metric strong { display: block; font-size: 20px; }
+        .auth-metric span { color: #d0d5dd; font-size: 12px; }
+        .auth-panel { background: #fff; }
+        .auth-panel label { display: block; margin-top: 12px; }
+        .auth-panel button { width: 100%; margin-top: 16px; }
+        .auth-switch { margin: 14px 0 0; }
+        .auth-switch a { color: var(--primary); cursor: pointer; font-weight: 800; }
+        .modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(9, 9, 11, .48);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 18px;
+            z-index: 10;
+        }
+        .modal {
+            width: min(560px, 100%);
+            max-height: calc(100vh - 36px);
+            overflow: auto;
+            background: #fff;
+            border-radius: var(--radius);
+            box-shadow: 0 24px 70px rgba(9, 9, 11, .24);
+            padding: 22px;
+        }
+        .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
+        .detail-block { margin-top: 16px; }
+        .detail-block h3 { margin: 0 0 8px; font-size: 14px; color: #344054; }
+        .detail-pre {
+            max-height: 240px;
+            overflow: auto;
+            white-space: pre-wrap;
+            word-break: break-word;
+            background: #111827;
+            color: #e5e7eb;
+            border-radius: var(--radius);
+            padding: 14px;
+            font-size: 12px;
+            line-height: 1.55;
+        }
+        .empty-state {
+            border: 1px dashed var(--line-strong);
+            border-radius: var(--radius);
+            padding: 18px;
+            background: var(--surface-soft);
+        }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
+        }
+        @media (max-width: 900px) {
+            .app-hero, .auth-layout, .utility-grid { grid-template-columns: 1fr; }
             .dashboard-actions { justify-content: flex-start; }
-            .locator-row { grid-template-columns: 1fr; }
-            .migration-row { grid-template-columns: 1fr; }
+            .filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .row { grid-template-columns: 1fr; }
+            .actions { min-width: 0; justify-items: stretch; }
+            .row-actions { justify-content: flex-start; }
+            .quick-category { width: 100%; }
+        }
+        @media (max-width: 640px) {
+            header { align-items: flex-start; padding: 18px 14px 8px; }
+            .header-pill { display: none; }
+            main { padding: 10px 14px 28px; }
+            .card { padding: 16px; }
+            .filter-grid, .summary-grid, .modal-grid, .locator-row, .migration-row { grid-template-columns: 1fr; }
+            .section-title { align-items: flex-start; flex-direction: column; }
+            .summary-value { font-size: 24px; }
+            .auth-metrics { grid-template-columns: 1fr; }
+            .row-actions button { flex: 1 1 auto; }
         }
     </style>
 </head>
 <body>
 <header>
-    <h1>AutoBookkeeper</h1>
-    <p>智能截图记账助手账目看板</p>
+    <div class="brand">
+        <div class="brand-mark">AB</div>
+        <div>
+            <h1>AutoBookkeeper</h1>
+            <p>AI 截图记账助手</p>
+        </div>
+    </div>
+    <div class="header-pill">iPhone Shortcuts · OCR · Dashboard</div>
 </header>
 <main>
     <section id="authCard" class="card">
-        <h2 id="authTitle">登录</h2>
-        <p id="accountStatus" class="meta">未登录</p>
-        <div id="notice" class="notice"></div>
-        <div id="loginPanel" class="auth-panel">
-            <label>用户名
-                <input id="loginUsername" type="text" autocomplete="username" minlength="3">
-            </label>
-            <label>密码
-                <input id="loginPassword" type="password" autocomplete="current-password" minlength="6">
-            </label>
-            <button onclick="loginAccount()">登录</button>
-            <p class="auth-switch meta">还没有账号？<a onclick="showRegister()">去注册</a></p>
-        </div>
-        <div id="registerPanel" class="auth-panel" style="display:none">
-            <label>用户名
-                <input id="registerUsername" type="text" autocomplete="username" minlength="3">
-            </label>
-            <label>密码
-                <input id="registerPassword" type="password" autocomplete="new-password" minlength="6">
-            </label>
-            <label>邀请码
-                <input id="registerInviteCode" type="password">
-            </label>
-            <button onclick="registerAccount()">注册并登录</button>
-            <p class="auth-switch meta">已有账号？<a onclick="showLogin()">返回登录</a></p>
+        <div class="auth-layout">
+            <div class="auth-copy">
+                <div class="eyebrow">Private Finance Workspace</div>
+                <h2>把截图里的消费，整理成可复核的月度账本。</h2>
+                <p>从 iPhone 快捷指令上传截图，自动识别金额、商户和分类。登录后可以查看汇总、筛选账目、修正 AI 识别结果。</p>
+                <div class="auth-metrics">
+                    <div class="auth-metric"><strong>AI</strong><span>自动识别</span></div>
+                    <div class="auth-metric"><strong>Token</strong><span>私有访问</span></div>
+                    <div class="auth-metric"><strong>Review</strong><span>人工复核</span></div>
+                </div>
+            </div>
+            <div class="auth-panel">
+                <h2 id="authTitle">登录</h2>
+                <p id="accountStatus" class="meta">未登录</p>
+                <div id="notice" class="notice"></div>
+                <div id="loginPanel">
+                    <label>用户名
+                        <input id="loginUsername" type="text" autocomplete="username" minlength="3">
+                    </label>
+                    <label>密码
+                        <input id="loginPassword" type="password" autocomplete="current-password" minlength="6">
+                    </label>
+                    <button onclick="loginAccount()">登录</button>
+                    <p class="auth-switch meta">还没有账号？<a onclick="showRegister()">去注册</a></p>
+                </div>
+                <div id="registerPanel" style="display:none">
+                    <label>用户名
+                        <input id="registerUsername" type="text" autocomplete="username" minlength="3">
+                    </label>
+                    <label>密码
+                        <input id="registerPassword" type="password" autocomplete="new-password" minlength="6">
+                    </label>
+                    <label>邀请码
+                        <input id="registerInviteCode" type="password">
+                    </label>
+                    <button onclick="registerAccount()">注册并登录</button>
+                    <p class="auth-switch meta">已有账号？<a onclick="showLogin()">返回登录</a></p>
+                </div>
+            </div>
         </div>
         <input id="token" type="hidden">
     </section>
     <section class="card dashboard">
-        <div class="dashboard-hero">
+        <div class="app-hero">
             <div>
+                <div class="eyebrow">Dashboard</div>
                 <h2>账目看板</h2>
+                <p class="meta">集中查看月度收支、复核 AI 识别结果，并管理快捷指令访问 Token。</p>
                 <p id="dashboardAccountStatus" class="meta"></p>
             </div>
             <div class="dashboard-actions">
@@ -135,20 +434,22 @@
             </div>
         </div>
         <div id="dashboardNotice" class="notice"></div>
-        <div class="locator-box">
-            <h3>快速定位账目</h3>
-            <p class="meta">快捷指令返回交易 ID 后，在这里输入 ID，会自动跳到该账目所在月份。</p>
-            <div class="locator-row">
-                <input id="globalTransactionId" type="search" placeholder="输入交易 ID，例如 35">
-                <button onclick="locateTransactionById()">定位账目</button>
+        <div class="utility-grid">
+            <div class="locator-box">
+                <h3>快速定位账目</h3>
+                <p class="meta">快捷指令返回交易 ID 后，输入 ID 会自动跳到对应月份。</p>
+                <div class="locator-row">
+                    <input id="globalTransactionId" type="search" placeholder="输入交易 ID，例如 35">
+                    <button onclick="locateTransactionById()">定位账目</button>
+                </div>
             </div>
-        </div>
-        <div class="migration-box">
-            <h3>旧数据迁移</h3>
-            <p class="meta">如果你之前已有旧账单，在这里输入旧版 API Token，把旧账单绑定到当前账号。</p>
-            <div class="migration-row">
-                <input id="legacyToken" type="password" placeholder="输入旧版 API Token">
-                <button class="secondary" onclick="migrateLegacyData()">迁移旧数据</button>
+            <div class="migration-box">
+                <h3>旧数据迁移</h3>
+                <p class="meta">输入旧版 API Token，把旧账单绑定到当前账号。</p>
+                <div class="migration-row">
+                    <input id="legacyToken" type="password" placeholder="输入旧版 API Token">
+                    <button class="secondary" onclick="migrateLegacyData()">迁移旧数据</button>
+                </div>
             </div>
         </div>
     </section>
@@ -192,6 +493,7 @@
                 <input id="reviewOnly" type="checkbox" onchange="renderTransactions()">
                 只看需复核
             </label>
+            <span class="meta">金额、分类和状态会在每次刷新后同步。</span>
         </div>
         <div id="transactions">加载中...</div>
     </section>
@@ -443,7 +745,7 @@
             const incomeChips = (data.incomeCategorySummaries || []).map(item => `<span class="summary-chip">收入 · ${escapeHtml(item.category)} ¥${item.amount}</span>`).join('');
             const categoryChips = `${incomeChips}${expenseChips}`;
             container.innerHTML = `
-                <div class="meta">${data.month}</div>
+                <div class="meta">统计周期：${data.month}</div>
                 <div class="summary-grid">
                     <div class="summary-box"><div class="summary-label">收入</div><div class="summary-value income">+¥${data.incomeTotal || 0}</div></div>
                     <div class="summary-box"><div class="summary-label">支出</div><div class="summary-value expense">-¥${data.expenseTotal || 0}</div></div>
@@ -495,13 +797,15 @@
             return true;
         });
         if (rows.length === 0) {
-            container.innerHTML = reviewOnly ? '<p class="meta">暂无需复核账目。</p>' : `
-                <p class="meta">当前月份暂无账目。</p>
-                <p class="meta">如果快捷指令返回了交易 ID，请用上方“快速定位账目”自动跳到对应月份；如果你之前已有旧账单，请先迁移旧数据。</p>
+            container.innerHTML = reviewOnly ? '<div class="empty-state"><p class="meta">暂无需复核账目。</p></div>' : `
+                <div class="empty-state">
+                    <p class="meta">当前月份暂无账目。</p>
+                    <p class="meta">如果快捷指令返回了交易 ID，请用上方“快速定位账目”自动跳到对应月份；如果你之前已有旧账单，请先迁移旧数据。</p>
+                </div>
             `;
             return;
         }
-        container.innerHTML = rows.map(item => {
+        container.innerHTML = `<div class="transaction-list">${rows.map(item => {
             const type = item.type || '支出';
             const isIncome = type === '收入';
             const amountClass = isIncome ? 'income' : 'expense';
@@ -510,21 +814,29 @@
                 <div class="row ${String(item.id) === highlightedTransactionId ? 'highlight-row' : ''}">
                     <div>
                         <div class="merchant">${escapeHtml(item.merchant)}</div>
-                        <div class="meta">ID ${item.id} · ${item.transactionDate || ''} · ${type} · ${escapeHtml(item.category)} · <span class="status ${statusClass(item.status)}">${statusLabel(item.status)}</span></div>
+                        <div class="transaction-meta">
+                            <span class="meta-item">ID ${item.id}</span>
+                            <span class="meta-item">${item.transactionDate || '日期未知'}</span>
+                            <span class="meta-item">${type}</span>
+                            <span class="meta-item">${escapeHtml(item.category)}</span>
+                            <span class="status ${statusClass(item.status)}">${statusLabel(item.status)}</span>
+                        </div>
                     </div>
                     <div class="actions">
                         <div class="amount ${amountClass}">${amountPrefix}¥${item.amount}</div>
-                        <select class="quick-category" onchange="quickUpdateCategory(${item.id}, this.value)">
-                            ${categoryOptions(type, item.category)}
-                        </select>
-                        <button class="muted" onclick="editTransaction(${item.id})">编辑</button>
-                        <button class="muted" onclick="showDetails(${item.id})">详情</button>
-                        ${item.status === 'NEEDS_REVIEW' ? `<button class="secondary" onclick="markProcessed(${item.id})">标记已处理</button>` : ''}
-                        <button class="danger" onclick="deleteTransaction(${item.id})">删除</button>
+                        <div class="row-actions">
+                            <select class="quick-category" onchange="quickUpdateCategory(${item.id}, this.value)">
+                                ${categoryOptions(type, item.category)}
+                            </select>
+                            <button class="muted" onclick="editTransaction(${item.id})">编辑</button>
+                            <button class="muted" onclick="showDetails(${item.id})">详情</button>
+                            ${item.status === 'NEEDS_REVIEW' ? `<button class="secondary" onclick="markProcessed(${item.id})">标记已处理</button>` : ''}
+                            <button class="danger" onclick="deleteTransaction(${item.id})">删除</button>
+                        </div>
                     </div>
                 </div>
             `;
-        }).join('');
+        }).join('')}</div>`;
     }
 
     async function markProcessed(id) {

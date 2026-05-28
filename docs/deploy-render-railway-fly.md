@@ -17,6 +17,7 @@ java -jar target/autobookkeeper-0.1.0.jar --spring.profiles.active=cloud
 ```text
 SPRING_PROFILES_ACTIVE=cloud
 AUTOBOOKKEEPER_API_TOKEN=<long-random-token>
+AUTOBOOKKEEPER_INVITE_CODE=<invite-code-for-registration>
 VISION_API_KEY={{API_KEY}}
 VISION_API_ENDPOINT=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
 VISION_MODEL=qwen3-vl-flash
@@ -31,6 +32,28 @@ DATABASE_PASSWORD=<password>
 - Render：选择 Web Service，运行 Java 17 LTS，绑定 PostgreSQL。
 - Railway：创建 Java 服务和 PostgreSQL 插件，配置环境变量。
 - Fly.io：适合进阶用户，可用 Docker 或 Java 直接部署。
+
+## Railway 部署
+
+1. 将仓库推送到 GitHub。
+2. 在 Railway 新建 Project，选择 Deploy from GitHub repo，并选择本仓库。
+3. 添加 PostgreSQL 服务。
+4. 在 Web 服务的 Variables 中配置：
+
+```text
+SPRING_PROFILES_ACTIVE=cloud
+AUTOBOOKKEEPER_API_TOKEN=<long-random-token>
+AUTOBOOKKEEPER_INVITE_CODE=<invite-code-for-registration>
+VISION_API_KEY={{API_KEY}}
+VISION_API_ENDPOINT=https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions
+VISION_MODEL=qwen3-vl-flash
+AUTOBOOKKEEPER_AI_TIMEOUT_MS=30000
+DATABASE_URL=${{Postgres.DATABASE_URL}}
+DATABASE_USERNAME=${{Postgres.PGUSER}}
+DATABASE_PASSWORD=${{Postgres.PGPASSWORD}}
+```
+
+Railway 会自动设置 `PORT`。项目的 `application.yml` 使用 `server.port=${PORT:8080}`，因此不需要手动配置端口。仓库包含 `Dockerfile`，Railway 会构建 jar 并通过 `docker-entrypoint.sh` 启动；如果 `DATABASE_URL` 是 `postgresql://...`，入口脚本会自动转换为 Spring Boot 需要的 `jdbc:postgresql://...`。
 
 Render Blueprint 已提供 `render.yaml`，会自动创建 Web Service 和 PostgreSQL 数据库，并将数据库 `connectionString` 注入到 `DATABASE_URL`。如果平台提供的是 `postgresql://...`，Docker 入口脚本会在启动时转换为 `jdbc:postgresql://...`。
 
