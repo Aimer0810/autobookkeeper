@@ -1,5 +1,7 @@
 package com.autobookkeeper.accounting;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 import java.io.IOException;
@@ -13,6 +15,8 @@ import java.util.Properties;
 
 @Component
 public class CategoryRuleLoader {
+
+    private static final Logger logger = LoggerFactory.getLogger(CategoryRuleLoader.class);
 
     private final Map<String, List<String>> rules;
 
@@ -34,7 +38,8 @@ public class CategoryRuleLoader {
             if (inputStream != null) {
                 properties.load(new java.io.InputStreamReader(inputStream, StandardCharsets.UTF_8));
             }
-        } catch (IOException ignored) {
+        } catch (IOException exception) {
+            logger.warn("Failed to load category_rules.properties from classpath, using empty rules", exception);
             return Map.of();
         }
 

@@ -29,7 +29,7 @@ class CompositeAIServiceTest {
         server.start();
         try {
             AutoBookkeeperProperties properties = new AutoBookkeeperProperties(
-                    "",
+                    "", "", "", "",
                     new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500, "https://example.com/v1/chat/completions", "qwen3-vl-flash"),
                     new AutoBookkeeperProperties.Privacy(false, true)
             );

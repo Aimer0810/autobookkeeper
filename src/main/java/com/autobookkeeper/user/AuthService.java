@@ -6,6 +6,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.security.SecureRandom;
@@ -77,7 +78,7 @@ public class AuthService {
     }
 
     private boolean hasConfiguredInviteCodes() {
-        return hasText(properties.inviteCode()) || hasText(properties.inviteCodes());
+        return StringUtils.hasText(properties.inviteCode()) || StringUtils.hasText(properties.inviteCodes());
     }
 
     private boolean isValidInviteCode(String inviteCode) {
@@ -88,17 +89,13 @@ public class AuthService {
     }
 
     private Stream<String> configuredInviteCodes() {
-        Stream<String> singleCode = hasText(properties.inviteCode()) ? Stream.of(properties.inviteCode()) : Stream.empty();
-        Stream<String> multipleCodes = hasText(properties.inviteCodes())
+        Stream<String> singleCode = StringUtils.hasText(properties.inviteCode()) ? Stream.of(properties.inviteCode()) : Stream.empty();
+        Stream<String> multipleCodes = StringUtils.hasText(properties.inviteCodes())
                 ? Arrays.stream(properties.inviteCodes().split(","))
                 : Stream.empty();
         return Stream.concat(singleCode, multipleCodes)
                 .map(String::trim)
-                .filter(this::hasText);
-    }
-
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
+                .filter(StringUtils::hasText);
     }
 
     private String uniqueOwnerKey() {

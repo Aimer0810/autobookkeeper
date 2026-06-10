@@ -26,56 +26,61 @@ import java.util.Base64;
 public class CloudVisionServiceImpl implements AIService {
 
     private static final Logger logger = LoggerFactory.getLogger(CloudVisionServiceImpl.class);
+    private static final String DEFAULT_ENDPOINT = "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions";
+    private static final String DEFAULT_MODEL = "qwen3-vl-flash";
+    private static final int DEFAULT_TIMEOUT_MS = 30000;
+    private static final String UNCONFIGURED_KEY_PLACEHOLDER = "{{API_KEY}}";
 
-    private final AutoBookkeeperProperties properties;
-    private final Environment environment;
     private final ObjectMapper objectMapper = new ObjectMapper();
+    private final HttpClient httpClient;
     private final URI endpoint;
+    private final String apiKey;
+    private final String model;
+    private final int timeoutMs;
 
     @Autowired
     public CloudVisionServiceImpl(AutoBookkeeperProperties properties, Environment environment) {
-        this(properties, environment, URI.create(environment.getProperty("autobookkeeper.ai.endpoint", configuredEndpoint(properties))));
+        this(
+                URI.create(environment.getProperty("autobookkeeper.ai.endpoint", resolveEndpoint(properties))),
+                environment.getProperty("autobookkeeper.ai.api-key", resolveApiKey(properties)),
+                environment.getProperty("autobookkeeper.ai.model", resolveModel(properties)),
+                environment.getProperty("autobookkeeper.ai.timeout-ms", Integer.class, resolveTimeoutMs(properties))
+        );
     }
 
     public CloudVisionServiceImpl(AutoBookkeeperProperties properties, URI endpoint) {
-        this.properties = properties;
-        this.environment = null;
-        this.endpoint = endpoint;
+        this(endpoint, resolveApiKey(properties), resolveModel(properties), resolveTimeoutMs(properties));
     }
 
-    public CloudVisionServiceImpl(AutoBookkeeperProperties properties) {
-        this(properties, URI.create(configuredEndpoint(properties)));
-    }
-
-    CloudVisionServiceImpl(AutoBookkeeperProperties properties, Environment environment, URI endpoint) {
-        this.properties = properties;
-        this.environment = environment;
+    CloudVisionServiceImpl(URI endpoint, String apiKey, String model, int timeoutMs) {
         this.endpoint = endpoint;
+        this.apiKey = apiKey;
+        this.model = model;
+        this.timeoutMs = timeoutMs;
+        this.httpClient = HttpClient.newBuilder()
+                .connectTimeout(Duration.ofMillis(timeoutMs))
+                .build();
     }
 
     @Override
     public Bill extractBillFromImage(byte[] imageData) {
-        String apiKey = apiKey();
-        if (apiKey == null || apiKey.isBlank() || "{{API_KEY}}".equals(apiKey)) {
+        if (apiKey == null || apiKey.isBlank() || UNCONFIGURED_KEY_PLACEHOLDER.equals(apiKey)) {
             return reviewBill(
                     "云端视觉 API Key 未配置，未向外部服务发送截图。",
                     "{\"provider\":\"cloud\",\"skipped\":true,\"reason\":\"api-key-not-configured\"}"
             );
         }
         try {
-            HttpClient client = HttpClient.newBuilder()
-                    .connectTimeout(Duration.ofMillis(timeoutMs()))
-                    .build();
-            Bill bill = requestBill(client, apiKey, imageData, false);
+            Bill bill = requestBill(httpClient, apiKey, imageData, false);
             if (shouldRetryWithStrictPrompt(bill)) {
-                Bill strictBill = requestBill(client, apiKey, imageData, true);
+                Bill strictBill = requestBill(httpClient, apiKey, imageData, true);
                 if (!shouldRetryWithStrictPrompt(strictBill) || strictBill.confidence() >= bill.confidence()) {
                     return strictBill;
                 }
             }
             return bill;
         } catch (Exception exception) {
-            logger.warn("Cloud vision API call failed for endpoint {} model {}", endpoint, model(), exception);
+            logger.warn("Cloud vision API call failed for endpoint {} model {}", endpoint, model, exception);
             return reviewBill("云端视觉 API 调用失败：" + exception.getClass().getSimpleName() + " " + abbreviate(exception.getMessage()), "{\"provider\":\"cloud\",\"error\":\"vision-api-call-failed\"}");
         }
     }
@@ -86,7 +91,7 @@ public class CloudVisionServiceImpl implements AIService {
 
     String buildVisionRequest(byte[] imageData, boolean strictReview) {
         ObjectNode root = objectMapper.createObjectNode();
-        root.put("model", model());
+        root.put("model", model);
         root.put("max_tokens", strictReview ? 360 : 300);
         ObjectNode responseFormat = root.putObject("response_format");
         responseFormat.put("type", "json_object");
@@ -133,14 +138,14 @@ public class CloudVisionServiceImpl implements AIService {
 
     private Bill requestBill(HttpClient client, String apiKey, byte[] imageData, boolean strictReview) throws Exception {
         HttpRequest request = HttpRequest.newBuilder(endpoint)
-                .timeout(Duration.ofMillis(timeoutMs()))
+                .timeout(Duration.ofMillis(timeoutMs))
                 .header("Authorization", "Bearer " + apiKey)
                 .header("Content-Type", "application/json")
                 .POST(HttpRequest.BodyPublishers.ofString(buildVisionRequest(imageData, strictReview)))
                 .build();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         if (response.statusCode() < 200 || response.statusCode() >= 300) {
-            logger.warn("Cloud vision API returned status {} for endpoint {} model {} bodySnippet {}", response.statusCode(), endpoint, model(), abbreviate(response.body()));
+            logger.warn("Cloud vision API returned status {} for endpoint {} model {} bodySnippet {}", response.statusCode(), endpoint, model, abbreviate(response.body()));
             return reviewBill("云端视觉 API 返回非成功状态：" + response.statusCode(), "{\"provider\":\"cloud\",\"status\":" + response.statusCode() + "}");
         }
         return parseBillJson(extractContent(response.body()));
@@ -176,45 +181,24 @@ public class CloudVisionServiceImpl implements AIService {
         return root.path("choices").path(0).path("message").path("content").asText("{}");
     }
 
-    private int timeoutMs() {
-        if (environment != null) {
-            return environment.getProperty("autobookkeeper.ai.timeout-ms", Integer.class, configuredTimeoutMs(properties));
-        }
-        return configuredTimeoutMs(properties);
-    }
-
-    private String model() {
-        if (environment != null) {
-            return environment.getProperty("autobookkeeper.ai.model", configuredModel(properties));
-        }
-        return configuredModel(properties);
-    }
-
-    private String apiKey() {
-        if (environment != null) {
-            return environment.getProperty("autobookkeeper.ai.api-key", configuredApiKey(properties));
-        }
-        return configuredApiKey(properties);
-    }
-
-    private static String configuredEndpoint(AutoBookkeeperProperties properties) {
+    private static String resolveEndpoint(AutoBookkeeperProperties properties) {
         return properties.ai() == null || properties.ai().endpoint() == null || properties.ai().endpoint().isBlank()
-                ? "https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"
+                ? DEFAULT_ENDPOINT
                 : properties.ai().endpoint();
     }
 
-    private static int configuredTimeoutMs(AutoBookkeeperProperties properties) {
-        return properties.ai() == null || properties.ai().timeoutMs() <= 0 ? 30000 : properties.ai().timeoutMs();
+    private static int resolveTimeoutMs(AutoBookkeeperProperties properties) {
+        return properties.ai() == null || properties.ai().timeoutMs() <= 0 ? DEFAULT_TIMEOUT_MS : properties.ai().timeoutMs();
     }
 
-    private static String configuredModel(AutoBookkeeperProperties properties) {
+    private static String resolveModel(AutoBookkeeperProperties properties) {
         return properties.ai() == null || properties.ai().model() == null || properties.ai().model().isBlank()
-                ? "qwen3-vl-flash"
+                ? DEFAULT_MODEL
                 : properties.ai().model();
     }
 
-    private static String configuredApiKey(AutoBookkeeperProperties properties) {
-        return properties.ai() == null ? "{{API_KEY}}" : properties.ai().apiKey();
+    private static String resolveApiKey(AutoBookkeeperProperties properties) {
+        return properties.ai() == null ? UNCONFIGURED_KEY_PLACEHOLDER : properties.ai().apiKey();
     }
 
     private Bill reviewBill(String rawText, String structuredJson) {

@@ -3,6 +3,7 @@ package com.autobookkeeper.security;
 import com.autobookkeeper.config.AutoBookkeeperProperties;
 import com.autobookkeeper.user.AppUserRepository;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.Arrays;
 import java.util.Optional;
@@ -40,7 +41,7 @@ public class UserTokenResolver {
     }
 
     public boolean hasConfiguredTokens() {
-        return appUserRepository.count() > 0 || hasText(properties.apiToken()) || hasText(properties.userTokens());
+        return appUserRepository.count() > 0 || StringUtils.hasText(properties.apiToken()) || StringUtils.hasText(properties.userTokens());
     }
 
     private Optional<AuthenticatedUser> resolveDatabaseUserToken(String providedToken) {
@@ -61,9 +62,5 @@ public class UserTokenResolver {
                 .filter(parts -> !parts[0].isBlank() && parts[1].equals(providedToken))
                 .map(parts -> new AuthenticatedUser(parts[0].trim()))
                 .findFirst();
-    }
-
-    private boolean hasText(String value) {
-        return value != null && !value.isBlank();
     }
 }

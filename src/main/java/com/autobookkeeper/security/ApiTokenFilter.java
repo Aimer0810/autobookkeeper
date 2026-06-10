@@ -13,6 +13,8 @@ import java.io.IOException;
 public class ApiTokenFilter extends OncePerRequestFilter {
 
     public static final String AUTHENTICATED_USER_ATTRIBUTE = "authenticatedUser";
+    private static final String PROCESS_PATH = "/api/process";
+    private static final String TRANSACTIONS_PATH_PREFIX = "/api/transactions";
 
     private final UserTokenResolver userTokenResolver;
 
@@ -47,7 +49,7 @@ public class ApiTokenFilter extends OncePerRequestFilter {
 
     private boolean requiresToken(HttpServletRequest request) {
         String path = request.getRequestURI();
-        return ("POST".equalsIgnoreCase(request.getMethod()) && "/api/process".equals(path))
-                || path.startsWith("/api/transactions");
+        return ("POST".equalsIgnoreCase(request.getMethod()) && PROCESS_PATH.equals(path))
+                || path.startsWith(TRANSACTIONS_PATH_PREFIX);
     }
 }

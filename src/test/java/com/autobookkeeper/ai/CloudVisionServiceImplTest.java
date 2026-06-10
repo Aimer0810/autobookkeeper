@@ -22,11 +22,9 @@ class CloudVisionServiceImplTest {
 
     @Test
     void parsesBillJsonFromVisionResponse() {
-        CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
-                "",
-                new AutoBookkeeperProperties.Ai("cloud", "{{API_KEY}}", 2500),
-                new AutoBookkeeperProperties.Privacy(false, true)
-        ));
+        CloudVisionServiceImpl service = new CloudVisionServiceImpl(
+                URI.create("http://localhost:0"), "{{API_KEY}}", "qwen3-vl-flash", 2500
+        );
 
         Bill bill = service.parseBillJson("{\"date\":\"2026-05-25\",\"amount\":\"42.50\",\"merchant\":\"瑞幸咖啡\",\"type\":\"支出\",\"category\":\"餐饮\",\"confidence\":0.92,\"rawText\":\"支付给瑞幸咖啡 42.50\"}");
 
@@ -56,7 +54,7 @@ class CloudVisionServiceImplTest {
         try {
             URI endpoint = URI.create("http://localhost:" + server.getAddress().getPort() + "/v1/chat/completions");
             CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
-                    "",
+                    "", "", "", "",
                     new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500),
                     new AutoBookkeeperProperties.Privacy(false, true)
             ), endpoint);
@@ -76,11 +74,12 @@ class CloudVisionServiceImplTest {
 
     @Test
     void usesConfiguredVisionModelInRequestBody() {
-        CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
-                "",
+        AutoBookkeeperProperties properties = new AutoBookkeeperProperties(
+                "", "", "", "",
                 new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500, "https://example.com/v1/chat/completions", "qwen3-vl-flash"),
                 new AutoBookkeeperProperties.Privacy(false, true)
-        ));
+        );
+        CloudVisionServiceImpl service = new CloudVisionServiceImpl(properties, URI.create("https://example.com/v1/chat/completions"));
 
         String requestBody = service.buildVisionRequest("image-bytes".getBytes());
 
@@ -91,11 +90,12 @@ class CloudVisionServiceImplTest {
 
     @Test
     void includesAccuracyGuidanceForChineseMerchantAndReviewConfidence() {
-        CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
-                "",
+        AutoBookkeeperProperties properties = new AutoBookkeeperProperties(
+                "", "", "", "",
                 new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500, "https://example.com/v1/chat/completions", "qwen3-vl-flash"),
                 new AutoBookkeeperProperties.Privacy(false, true)
-        ));
+        );
+        CloudVisionServiceImpl service = new CloudVisionServiceImpl(properties, URI.create("https://example.com/v1/chat/completions"));
 
         String requestBody = service.buildVisionRequest("image-bytes".getBytes());
 
@@ -109,11 +109,12 @@ class CloudVisionServiceImplTest {
 
     @Test
     void includesComplexScreenshotGuidanceInRequestBody() {
-        CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
-                "",
+        AutoBookkeeperProperties properties = new AutoBookkeeperProperties(
+                "", "", "", "",
                 new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500, "https://example.com/v1/chat/completions", "qwen3-vl-flash"),
                 new AutoBookkeeperProperties.Privacy(false, true)
-        ));
+        );
+        CloudVisionServiceImpl service = new CloudVisionServiceImpl(properties, URI.create("https://example.com/v1/chat/completions"));
 
         String requestBody = service.buildVisionRequest("image-bytes".getBytes());
 
@@ -153,7 +154,7 @@ class CloudVisionServiceImplTest {
         try {
             URI endpoint = URI.create("http://localhost:" + server.getAddress().getPort() + "/v1/chat/completions");
             CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
-                    "",
+                    "", "", "", "",
                     new AutoBookkeeperProperties.Ai("cloud", "real-test-key", 2500),
                     new AutoBookkeeperProperties.Privacy(false, true)
             ), endpoint);
@@ -193,7 +194,7 @@ class CloudVisionServiceImplTest {
                     .withProperty("autobookkeeper.ai.model", "qwen3-vl-flash")
                     .withProperty("autobookkeeper.ai.timeout-ms", "30000");
             CloudVisionServiceImpl service = new CloudVisionServiceImpl(new AutoBookkeeperProperties(
-                    "",
+                    "", "", "", "",
                     new AutoBookkeeperProperties.Ai("cloud", "{{API_KEY}}", 2500),
                     new AutoBookkeeperProperties.Privacy(false, true)
             ), environment);

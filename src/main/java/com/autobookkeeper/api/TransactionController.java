@@ -6,7 +6,6 @@ import com.autobookkeeper.api.dto.UpdateTransactionRequest;
 import com.autobookkeeper.domain.Transaction;
 import com.autobookkeeper.domain.TransactionType;
 import com.autobookkeeper.repository.TransactionRepository;
-import com.autobookkeeper.security.ApiTokenFilter;
 import com.autobookkeeper.security.AuthenticatedUser;
 import com.autobookkeeper.security.UserTokenResolver;
 import jakarta.servlet.http.HttpServletRequest;
@@ -51,7 +50,7 @@ public class TransactionController {
                                           @RequestParam(required = false) String month,
                                           HttpServletRequest request) {
         PageRequest pageRequest = PageRequest.of(page, Math.min(size, 100));
-        String ownerKey = authenticatedUser(request).ownerKey();
+        String ownerKey = AuthenticatedUser.fromRequest(request).ownerKey();
         if (month != null && !month.isBlank()) {
             YearMonth yearMonth = parseMonth(month);
             return findPage(ownerKey, yearMonth, pageRequest)
@@ -64,15 +63,9 @@ public class TransactionController {
     @GetMapping("/summary")
     public MonthlySummaryResponse summary(@RequestParam String month, HttpServletRequest request) {
         YearMonth yearMonth = parseMonth(month);
-        List<Transaction> transactions = findAll(authenticatedUser(request).ownerKey(), yearMonth);
-        BigDecimal incomeTotal = transactions.stream()
-                .filter(transaction -> transaction.getType() == TransactionType.INCOME)
-                .map(Transaction::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-        BigDecimal expenseTotal = transactions.stream()
-                .filter(transaction -> transaction.getType() == TransactionType.EXPENSE)
-                .map(Transaction::getAmount)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        List<Transaction> transactions = findAll(AuthenticatedUser.fromRequest(request).ownerKey(), yearMonth);
+        BigDecimal incomeTotal = sumByType(transactions, TransactionType.INCOME);
+        BigDecimal expenseTotal = sumByType(transactions, TransactionType.EXPENSE);
         Map<String, BigDecimal> incomeByCategory = new LinkedHashMap<>();
         Map<String, BigDecimal> expenseByCategory = new LinkedHashMap<>();
         transactions.stream()
@@ -81,13 +74,24 @@ public class TransactionController {
                     Map<String, BigDecimal> target = transaction.getType() == TransactionType.INCOME ? incomeByCategory : expenseByCategory;
                     target.merge(transaction.getCategory(), transaction.getAmount(), BigDecimal::add);
                 });
-        List<MonthlySummaryResponse.CategorySummary> incomeCategorySummaries = incomeByCategory.entrySet().stream()
+        return new MonthlySummaryResponse(
+                month, incomeTotal, expenseTotal, incomeTotal.subtract(expenseTotal),
+                toCategorySummaries(incomeByCategory),
+                toCategorySummaries(expenseByCategory)
+        );
+    }
+
+    private BigDecimal sumByType(List<Transaction> transactions, TransactionType type) {
+        return transactions.stream()
+                .filter(transaction -> transaction.getType() == type)
+                .map(Transaction::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+    }
+
+    private List<MonthlySummaryResponse.CategorySummary> toCategorySummaries(Map<String, BigDecimal> categoryMap) {
+        return categoryMap.entrySet().stream()
                 .map(entry -> new MonthlySummaryResponse.CategorySummary(entry.getKey(), entry.getValue()))
                 .toList();
-        List<MonthlySummaryResponse.CategorySummary> expenseCategorySummaries = expenseByCategory.entrySet().stream()
-                .map(entry -> new MonthlySummaryResponse.CategorySummary(entry.getKey(), entry.getValue()))
-                .toList();
-        return new MonthlySummaryResponse(month, incomeTotal, expenseTotal, incomeTotal.subtract(expenseTotal), incomeCategorySummaries, expenseCategorySummaries);
     }
 
     private YearMonth parseMonth(String month) {
@@ -100,14 +104,14 @@ public class TransactionController {
 
     @GetMapping("/{id}")
     public TransactionResponse get(@PathVariable Long id, HttpServletRequest request) {
-        return findById(id, authenticatedUser(request).ownerKey())
+        return findById(id, AuthenticatedUser.fromRequest(request).ownerKey())
                 .map(TransactionResponse::from)
                 .orElseThrow(() -> new ResponseStatusException(NOT_FOUND, "Transaction not found"));
     }
 
     @PatchMapping("/{id}")
     public TransactionResponse update(@PathVariable Long id, @RequestBody UpdateTransactionRequest request, HttpServletRequest httpRequest) {
-        return findById(id, authenticatedUser(httpRequest).ownerKey())
+        return findById(id, AuthenticatedUser.fromRequest(httpRequest).ownerKey())
                 .map(transaction -> {
                     transaction.update(request.transactionDate(), request.amount(), request.merchant(), TransactionType.fromLabel(request.type()), request.category(), request.status());
                     return TransactionResponse.from(transactionRepository.save(transaction));
@@ -117,20 +121,12 @@ public class TransactionController {
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id, HttpServletRequest request) {
-        String ownerKey = authenticatedUser(request).ownerKey();
+        String ownerKey = AuthenticatedUser.fromRequest(request).ownerKey();
         if (!existsById(id, ownerKey)) {
             throw new ResponseStatusException(NOT_FOUND, "Transaction not found");
         }
         transactionRepository.deleteById(id);
         return ResponseEntity.noContent().build();
-    }
-
-    private AuthenticatedUser authenticatedUser(HttpServletRequest request) {
-        Object value = request.getAttribute(ApiTokenFilter.AUTHENTICATED_USER_ATTRIBUTE);
-        if (value instanceof AuthenticatedUser authenticatedUser) {
-            return authenticatedUser;
-        }
-        return new AuthenticatedUser("default");
     }
 
     private Page<Transaction> findPage(String ownerKey, PageRequest pageRequest) {

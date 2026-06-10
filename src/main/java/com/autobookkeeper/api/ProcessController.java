@@ -5,9 +5,9 @@ import com.autobookkeeper.ai.AIService;
 import com.autobookkeeper.api.dto.ProcessImageRequest;
 import com.autobookkeeper.api.dto.ProcessImageResponse;
 import com.autobookkeeper.domain.Bill;
+import com.autobookkeeper.domain.ProcessingStatus;
 import com.autobookkeeper.domain.Transaction;
 import com.autobookkeeper.repository.TransactionRepository;
-import com.autobookkeeper.security.ApiTokenFilter;
 import com.autobookkeeper.security.AuthenticatedUser;
 import jakarta.validation.Valid;
 import jakarta.servlet.http.HttpServletRequest;
@@ -44,7 +44,7 @@ public class ProcessController {
         }
         Bill bill = aiService.extractBillFromImage(imageData);
         Transaction transactionToSave = accountingEngine.createTransaction(bill, request.source());
-        transactionToSave.assignOwner(authenticatedUser(httpRequest).ownerKey());
+        transactionToSave.assignOwner(AuthenticatedUser.fromRequest(httpRequest).ownerKey());
         Transaction transaction = transactionRepository.save(transactionToSave);
         return new ProcessImageResponse(
                 transaction.getId(),
@@ -54,7 +54,7 @@ public class ProcessController {
                 transaction.getAmount(),
                 transaction.getCategory(),
                 transaction.getConfidence(),
-                transaction.getStatus().name().equals("NEEDS_REVIEW"),
+                transaction.getStatus() == ProcessingStatus.NEEDS_REVIEW,
                 bill.needsReview() ? bill.rawText() : ""
         );
     }
@@ -66,13 +66,5 @@ public class ProcessController {
             value = value.substring(commaIndex + 1);
         }
         return value.replaceAll("\\s", "");
-    }
-
-    private AuthenticatedUser authenticatedUser(HttpServletRequest request) {
-        Object value = request.getAttribute(ApiTokenFilter.AUTHENTICATED_USER_ATTRIBUTE);
-        if (value instanceof AuthenticatedUser authenticatedUser) {
-            return authenticatedUser;
-        }
-        return new AuthenticatedUser("default");
     }
 }
