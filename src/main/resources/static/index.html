@@ -4,1057 +4,323 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AutoBookkeeper</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['"Plus Jakarta Sans"', 'system-ui', 'sans-serif'] },
+                    colors: {
+                        sand: { 50:'#fefdfb',100:'#fdf8f0',200:'#f9eed8',300:'#f2ddb8',400:'#e8c48c',500:'#d4a055',600:'#b8833a',700:'#946729',800:'#704d1e',900:'#4a3314' },
+                        coral: { 50:'#fff5f3',100:'#ffe8e3',200:'#ffd1c7',300:'#ffad9e',400:'#ff7f68',500:'#f05540',600:'#d93d2a',700:'#b52e1f',800:'#95271c',900:'#7c251d' },
+                        sage: { 50:'#f4f7f4',100:'#e5ebe5',200:'#cddacd',300:'#a8bfa8',400:'#7d9d7d',500:'#5e805e',600:'#496649',700:'#3b513b',800:'#314231',900:'#293729' },
+                        clay: { 50:'#faf9f7',100:'#f0eeea',200:'#e0dbd4',300:'#ccc4b8',400:'#b3a694',500:'#9a8c78',600:'#847565',700:'#6d6054',800:'#5b5048',900:'#4d443e' },
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        :root {
-            --bg: #f7f8fb;
-            --surface: #ffffff;
-            --surface-soft: #f9fafb;
-            --text: #09090b;
-            --muted: #667085;
-            --line: #e4e7ec;
-            --line-strong: #d0d5dd;
-            --primary: #2563eb;
-            --primary-dark: #1d4ed8;
-            --income: #047857;
-            --expense: #dc2626;
-            --warning: #b45309;
-            --shadow: 0 16px 40px rgba(16, 24, 40, .08);
-            --radius: 8px;
-        }
-
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            min-height: 100vh;
-            font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            background: var(--bg);
-            color: var(--text);
-            letter-spacing: 0;
-        }
-        body::before {
-            content: "";
-            position: fixed;
-            inset: 0 0 auto;
-            height: 260px;
-            background: linear-gradient(180deg, #eef4ff 0%, rgba(247, 248, 251, 0) 100%);
-            pointer-events: none;
-            z-index: -1;
-        }
-        header {
-            max-width: 1180px;
-            margin: 0 auto;
-            padding: 24px 20px 12px;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 20px;
-        }
-        .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
-        .brand-mark {
-            width: 40px;
-            height: 40px;
-            border-radius: var(--radius);
-            display: grid;
-            place-items: center;
-            background: var(--text);
-            color: #fff;
-            font-weight: 900;
-            box-shadow: 0 10px 22px rgba(9, 9, 11, .16);
-        }
-        header h1 { margin: 0; font-size: 20px; line-height: 1.1; letter-spacing: 0; }
-        header p { margin: 4px 0 0; color: var(--muted); font-size: 13px; }
-        .header-pill {
-            border: 1px solid var(--line);
-            border-radius: 999px;
-            padding: 8px 12px;
-            color: #344054;
-            background: rgba(255, 255, 255, .78);
-            font-size: 13px;
-            white-space: nowrap;
-        }
-        main { max-width: 1180px; margin: 0 auto; padding: 12px 20px 40px; }
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            box-shadow: var(--shadow);
-            padding: 22px;
-            margin-bottom: 16px;
-        }
-        .muted-panel, .auth-panel, .locator-box, .migration-box {
-            background: var(--surface-soft);
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            padding: 16px;
-        }
-        input, select {
-            width: 100%;
-            min-height: 42px;
-            padding: 10px 12px;
-            border: 1px solid var(--line-strong);
-            border-radius: var(--radius);
-            background: #fff;
-            color: var(--text);
-            font: inherit;
-            outline: none;
-            transition: border-color .18s ease, box-shadow .18s ease;
-        }
-        input:focus, select:focus {
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(37, 99, 235, .14);
-        }
-        button {
-            min-height: 42px;
-            padding: 10px 14px;
-            border: 1px solid transparent;
-            border-radius: var(--radius);
-            background: var(--primary);
-            color: white;
-            font: inherit;
-            font-weight: 750;
-            cursor: pointer;
-            transition: background .18s ease, border-color .18s ease, color .18s ease, box-shadow .18s ease;
-        }
-        button:hover { background: var(--primary-dark); box-shadow: 0 8px 18px rgba(37, 99, 235, .18); }
-        button:focus-visible { outline: 3px solid rgba(37, 99, 235, .24); outline-offset: 2px; }
-        button.secondary { background: #111827; }
-        button.secondary:hover { background: #030712; box-shadow: 0 8px 18px rgba(17, 24, 39, .16); }
-        button.danger { background: #fff; color: var(--expense); border-color: #fecaca; }
-        button.danger:hover { background: #fef2f2; box-shadow: none; }
-        button.muted { background: #fff; color: #344054; border-color: var(--line-strong); }
-        button.muted:hover { background: #f9fafb; box-shadow: none; }
-        label { color: #344054; font-size: 13px; font-weight: 700; }
-        label input, label select { margin-top: 7px; }
-        .meta { color: var(--muted); font-size: 13px; line-height: 1.5; }
-        .notice {
-            padding: 12px 14px;
-            border-radius: var(--radius);
-            background: #fff7ed;
-            color: #9a3412;
-            border: 1px solid #fed7aa;
-            margin: 14px 0;
-            display: none;
-        }
-        .dashboard { display: none; }
-        .app-hero {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 18px;
-            align-items: start;
-        }
-        .eyebrow {
-            color: var(--primary);
-            font-size: 12px;
-            font-weight: 800;
-            text-transform: uppercase;
-            letter-spacing: .08em;
-            margin-bottom: 8px;
-        }
-        .app-hero h2, #authTitle, .section-title h2, .modal h2 {
-            margin: 0;
-            font-size: 24px;
-            line-height: 1.2;
-            letter-spacing: 0;
-        }
-        .app-hero p { margin: 8px 0 0; max-width: 620px; }
-        .dashboard-actions, .modal-actions, .inline-actions {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            justify-content: flex-end;
-            align-items: center;
-        }
-        .utility-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 14px;
-            margin-top: 18px;
-        }
-        .locator-box h3, .migration-box h3 {
-            margin: 0 0 6px;
-            color: #101828;
-            font-size: 15px;
-        }
-        .locator-row, .migration-row {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 10px;
-            align-items: end;
-            margin-top: 12px;
-        }
-        .section-title {
-            display: flex;
-            justify-content: space-between;
-            gap: 14px;
-            align-items: flex-end;
-            margin-bottom: 16px;
-        }
-        .filter-grid {
-            display: grid;
-            grid-template-columns: 1fr 1.35fr 1fr 1fr 1fr;
-            gap: 12px;
-            margin-bottom: 16px;
-        }
-        .toolbar {
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            gap: 12px;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-        .toolbar label { display: inline-flex; align-items: center; gap: 8px; }
-        .toolbar input { width: 16px; min-height: 16px; margin: 0; }
-        .summary-grid {
-            display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
-            gap: 12px;
-            margin: 12px 0 14px;
-        }
-        .summary-box {
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            background: #fff;
-            padding: 16px;
-        }
-        .summary-label { color: var(--muted); font-size: 12px; font-weight: 800; }
-        .summary-value { font-size: 28px; font-weight: 900; margin-top: 8px; line-height: 1; }
-        .summary-value.income { color: var(--income); }
-        .summary-value.expense { color: var(--expense); }
-        .summary-value.balance { color: var(--primary); }
-        .summary-categories { display: flex; flex-wrap: wrap; gap: 8px; }
-        .summary-chip {
-            background: #f2f4f7;
-            border: 1px solid #eaecf0;
-            border-radius: 999px;
-            padding: 7px 10px;
-            color: #344054;
-            font-size: 13px;
-        }
-        .transaction-list { display: grid; gap: 10px; }
-        .row {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) auto;
-            gap: 16px;
-            align-items: center;
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            padding: 14px;
-            background: #fff;
-        }
-        .merchant { font-weight: 850; color: #101828; }
-        .transaction-meta {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 7px;
-            margin-top: 7px;
-            align-items: center;
-        }
-        .meta-item { color: var(--muted); font-size: 13px; }
-        .status {
-            display: inline-flex;
-            align-items: center;
-            padding: 4px 8px;
-            border-radius: 999px;
-            background: #eef4ff;
-            color: #1d4ed8;
-            font-size: 12px;
-            font-weight: 800;
-        }
-        .status.review { background: #fffbeb; color: var(--warning); }
-        .status.processed { background: #ecfdf3; color: var(--income); }
-        .actions {
-            display: grid;
-            grid-template-columns: auto;
-            justify-items: end;
-            gap: 8px;
-            min-width: 320px;
-        }
-        .amount { font-size: 20px; font-weight: 900; color: var(--text); }
-        .amount.income { color: var(--income); }
-        .amount.expense { color: var(--expense); }
-        .row-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
-        .quick-category { width: 132px; min-height: 38px; padding: 8px 10px; }
-        .highlight-row { border-color: #f59e0b; box-shadow: 0 0 0 3px rgba(245, 158, 11, .14); }
-        .auth-layout {
-            display: grid;
-            grid-template-columns: minmax(0, 1fr) 360px;
-            gap: 18px;
-            align-items: stretch;
-        }
-        .auth-copy {
-            border: 1px solid var(--line);
-            border-radius: var(--radius);
-            padding: 22px;
-            background: #101828;
-            color: #fff;
-        }
-        .auth-copy h2 { margin: 0; font-size: 26px; }
-        .auth-copy p { color: #d0d5dd; line-height: 1.6; }
-        .auth-metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 22px; }
-        .auth-metric { border-top: 1px solid rgba(255,255,255,.18); padding-top: 12px; }
-        .auth-metric strong { display: block; font-size: 20px; }
-        .auth-metric span { color: #d0d5dd; font-size: 12px; }
-        .auth-panel { background: #fff; }
-        .auth-panel label { display: block; margin-top: 12px; }
-        .auth-panel button { width: 100%; margin-top: 16px; }
-        .auth-switch { margin: 14px 0 0; }
-        .auth-switch a { color: var(--primary); cursor: pointer; font-weight: 800; }
-        .modal-backdrop {
-            position: fixed;
-            inset: 0;
-            background: rgba(9, 9, 11, .48);
-            display: none;
-            align-items: center;
-            justify-content: center;
-            padding: 18px;
-            z-index: 10;
-        }
-        .modal {
-            width: min(560px, 100%);
-            max-height: calc(100vh - 36px);
-            overflow: auto;
-            background: #fff;
-            border-radius: var(--radius);
-            box-shadow: 0 24px 70px rgba(9, 9, 11, .24);
-            padding: 22px;
-        }
-        .modal-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 16px; }
-        .detail-block { margin-top: 16px; }
-        .detail-block h3 { margin: 0 0 8px; font-size: 14px; color: #344054; }
-        .detail-pre {
-            max-height: 240px;
-            overflow: auto;
-            white-space: pre-wrap;
-            word-break: break-word;
-            background: #111827;
-            color: #e5e7eb;
-            border-radius: var(--radius);
-            padding: 14px;
-            font-size: 12px;
-            line-height: 1.55;
-        }
-        .empty-state {
-            border: 1px dashed var(--line-strong);
-            border-radius: var(--radius);
-            padding: 18px;
-            background: var(--surface-soft);
-        }
-        @media (prefers-reduced-motion: reduce) {
-            *, *::before, *::after { transition: none !important; scroll-behavior: auto !important; }
-        }
-        @media (max-width: 900px) {
-            .app-hero, .auth-layout, .utility-grid { grid-template-columns: 1fr; }
-            .dashboard-actions { justify-content: flex-start; }
-            .filter-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-            .row { grid-template-columns: 1fr; }
-            .actions { min-width: 0; justify-items: stretch; }
-            .row-actions { justify-content: flex-start; }
-            .quick-category { width: 100%; }
-        }
-        @media (max-width: 640px) {
-            header { align-items: flex-start; padding: 18px 14px 8px; }
-            .header-pill { display: none; }
-            main { padding: 10px 14px 28px; }
-            .card { padding: 16px; }
-            .filter-grid, .summary-grid, .modal-grid, .locator-row, .migration-row { grid-template-columns: 1fr; }
-            .section-title { align-items: flex-start; flex-direction: column; }
-            .summary-value { font-size: 24px; }
-            .auth-metrics { grid-template-columns: 1fr; }
-            .row-actions button { flex: 1 1 auto; }
-        }
+        *{box-sizing:border-box}
+        body{font-family:'Plus Jakarta Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased;background:#faf9f7}
+        @media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}
+        .tk-blur{filter:blur(5px);user-select:none;transition:filter 0.3s}
+        .tk-blur.show{filter:none}
+        ::-webkit-scrollbar{width:6px;height:6px}
+        ::-webkit-scrollbar-track{background:transparent}
+        ::-webkit-scrollbar-thumb{background:#e0dbd4;border-radius:99px}
+        ::-webkit-scrollbar-thumb:hover{background:#ccc4b8}
+        @keyframes fadeUp{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+        .fade-up{animation:fadeUp 0.3s ease-out}
+        .nav-on{background:#fff5f3;color:#d93d2a;font-weight:600}
     </style>
 </head>
-<body>
-<header>
-    <div class="brand">
-        <div class="brand-mark">AB</div>
-        <div>
-            <h1>AutoBookkeeper</h1>
-            <p>AI 截图记账助手</p>
+<body class="bg-clay-50 text-clay-800 min-h-screen">
+
+<!-- AUTH -->
+<div id="authPage" class="min-h-screen flex">
+    <div class="hidden lg:flex lg:w-[50%] bg-sand-100 relative overflow-hidden">
+        <div class="absolute inset-0" style="background:radial-gradient(circle at 70% 30%,rgba(240,85,64,0.06),transparent 50%),radial-gradient(circle at 30% 70%,rgba(94,128,94,0.05),transparent 50%)"></div>
+        <div class="relative z-10 flex flex-col justify-between p-10 xl:p-14 w-full">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 rounded-2xl bg-coral-500 flex items-center justify-center"><span class="text-white text-sm font-extrabold tracking-tighter">AB</span></div>
+                <span class="text-base font-bold text-clay-700">AutoBookkeeper</span>
+            </div>
+            <div class="max-w-md">
+                <h1 class="text-[42px] xl:text-[50px] font-extrabold text-clay-900 leading-[1.08] tracking-tight">截图即记账<br><span class="text-coral-500">让 AI 帮你管钱</span></h1>
+                <p class="mt-4 text-base text-clay-500 leading-relaxed">上传支付截图，AI 自动识别金额、商户和分类。iPhone 快捷指令一键上传，数据完全私有。</p>
+                <div class="flex gap-5 mt-8">
+                    <div class="flex items-center gap-2"><i data-lucide="sparkles" class="w-5 h-5 text-coral-400" stroke-width="1.5"></i><span class="text-sm font-semibold text-clay-600">AI 识别</span></div>
+                    <div class="flex items-center gap-2"><i data-lucide="lock" class="w-5 h-5 text-sage-500" stroke-width="1.5"></i><span class="text-sm font-semibold text-clay-600">私有部署</span></div>
+                    <div class="flex items-center gap-2"><i data-lucide="bar-chart-3" class="w-5 h-5 text-sand-600" stroke-width="1.5"></i><span class="text-sm font-semibold text-clay-600">月度报表</span></div>
+                </div>
+            </div>
+            <p class="text-xs text-clay-400">&copy; 2026 AutoBookkeeper</p>
         </div>
     </div>
-    <div class="header-pill">iPhone Shortcuts · OCR · Dashboard</div>
-</header>
-<main>
-    <section id="authCard" class="card">
-        <div class="auth-layout">
-            <div class="auth-copy">
-                <div class="eyebrow">Private Finance Workspace</div>
-                <h2>把截图里的消费，整理成可复核的月度账本。</h2>
-                <p>从 iPhone 快捷指令上传截图，自动识别金额、商户和分类。登录后可以查看汇总、筛选账目、修正 AI 识别结果。</p>
-                <div class="auth-metrics">
-                    <div class="auth-metric"><strong>AI</strong><span>自动识别</span></div>
-                    <div class="auth-metric"><strong>Token</strong><span>私有访问</span></div>
-                    <div class="auth-metric"><strong>Review</strong><span>人工复核</span></div>
-                </div>
+    <div class="flex-1 flex items-center justify-center p-6 sm:p-10 bg-white">
+        <div class="w-full max-w-sm">
+            <div class="flex items-center gap-2.5 mb-10 lg:hidden">
+                <div class="w-9 h-9 rounded-xl bg-coral-500 flex items-center justify-center"><span class="text-white text-xs font-extrabold tracking-tighter">AB</span></div>
+                <span class="text-base font-bold text-clay-700">AutoBookkeeper</span>
             </div>
-            <div class="auth-panel">
-                <h2 id="authTitle">登录</h2>
-                <p id="accountStatus" class="meta">未登录</p>
-                <div id="notice" class="notice"></div>
-                <div id="loginPanel">
-                    <label>用户名
-                        <input id="loginUsername" type="text" autocomplete="username" minlength="3">
-                    </label>
-                    <label>密码
-                        <input id="loginPassword" type="password" autocomplete="current-password" minlength="6">
-                    </label>
-                    <button onclick="loginAccount()">登录</button>
-                    <p class="auth-switch meta">还没有账号？<a onclick="showRegister()">去注册</a></p>
-                </div>
-                <div id="registerPanel" style="display:none">
-                    <label>用户名
-                        <input id="registerUsername" type="text" autocomplete="username" minlength="3">
-                    </label>
-                    <label>密码
-                        <input id="registerPassword" type="password" autocomplete="new-password" minlength="6">
-                    </label>
-                    <label>邀请码
-                        <input id="registerInviteCode" type="password">
-                    </label>
-                    <button onclick="registerAccount()">注册并登录</button>
-                    <p class="auth-switch meta">已有账号？<a onclick="showLogin()">返回登录</a></p>
-                </div>
+            <h2 id="authTitle" class="text-2xl font-extrabold text-clay-900 tracking-tight">欢迎回来 👋</h2>
+            <p id="authSub" class="text-sm text-clay-400 mt-1.5">登录你的账号开始记账</p>
+            <div id="notice" class="hidden mt-5 text-sm text-coral-700 bg-coral-50 border border-coral-200 rounded-2xl px-4 py-3"></div>
+            <div id="loginPanel" class="mt-7 space-y-4">
+                <div><label class="block text-xs font-semibold text-clay-500 mb-1.5">用户名</label><input id="loginUsername" type="text" autocomplete="username" minlength="3" class="w-full h-11 px-4 text-sm bg-clay-50 border border-clay-200 rounded-2xl text-clay-800 placeholder-clay-300 outline-none focus:border-coral-400 focus:ring-2 focus:ring-coral-100 transition-all" placeholder="输入用户名"></div>
+                <div><label class="block text-xs font-semibold text-clay-500 mb-1.5">密码</label><input id="loginPassword" type="password" autocomplete="current-password" minlength="6" class="w-full h-11 px-4 text-sm bg-clay-50 border border-clay-200 rounded-2xl text-clay-800 placeholder-clay-300 outline-none focus:border-coral-400 focus:ring-2 focus:ring-coral-100 transition-all" placeholder="输入密码"></div>
+                <button onclick="loginAccount()" class="w-full h-11 bg-coral-500 hover:bg-coral-600 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-coral-500/20 hover:shadow-coral-500/30 cursor-pointer">登录</button>
+                <p class="text-sm text-clay-400 text-center">还没有账号？<a onclick="showReg()" class="text-coral-500 font-semibold cursor-pointer hover:text-coral-600">注册</a></p>
             </div>
-        </div>
-        <input id="token" type="hidden">
-    </section>
-    <section class="card dashboard">
-        <div class="app-hero">
-            <div>
-                <div class="eyebrow">Dashboard</div>
-                <h2>账目看板</h2>
-                <p class="meta">集中查看月度收支、复核 AI 识别结果，并管理快捷指令访问 Token。</p>
-                <p id="dashboardAccountStatus" class="meta"></p>
+            <div id="regPanel" class="hidden mt-7 space-y-4">
+                <div><label class="block text-xs font-semibold text-clay-500 mb-1.5">用户名</label><input id="regUser" type="text" autocomplete="username" minlength="3" class="w-full h-11 px-4 text-sm bg-clay-50 border border-clay-200 rounded-2xl text-clay-800 placeholder-clay-300 outline-none focus:border-coral-400 focus:ring-2 focus:ring-coral-100 transition-all" placeholder="至少 3 位"></div>
+                <div><label class="block text-xs font-semibold text-clay-500 mb-1.5">密码</label><input id="regPass" type="password" autocomplete="new-password" minlength="6" class="w-full h-11 px-4 text-sm bg-clay-50 border border-clay-200 rounded-2xl text-clay-800 placeholder-clay-300 outline-none focus:border-coral-400 focus:ring-2 focus:ring-coral-100 transition-all" placeholder="至少 6 位"></div>
+                <div><label class="block text-xs font-semibold text-clay-500 mb-1.5">邀请码</label><input id="regCode" type="password" class="w-full h-11 px-4 text-sm bg-clay-50 border border-clay-200 rounded-2xl text-clay-800 placeholder-clay-300 outline-none focus:border-coral-400 focus:ring-2 focus:ring-coral-100 transition-all" placeholder="输入邀请码"></div>
+                <button onclick="regAccount()" class="w-full h-11 bg-coral-500 hover:bg-coral-600 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-coral-500/20 hover:shadow-coral-500/30 cursor-pointer">注册</button>
+                <p class="text-sm text-clay-400 text-center">已有账号？<a onclick="showLogin()" class="text-coral-500 font-semibold cursor-pointer hover:text-coral-600">登录</a></p>
             </div>
-            <div class="dashboard-actions">
-                <button class="secondary" onclick="copyToken()">复制快捷指令 Token</button>
-                <button class="muted" onclick="logoutAccount()">退出登录</button>
-            </div>
-        </div>
-        <div id="dashboardNotice" class="notice"></div>
-        <div class="utility-grid">
-            <div class="locator-box">
-                <h3>快速定位账目</h3>
-                <p class="meta">快捷指令返回交易 ID 后，输入 ID 会自动跳到对应月份。</p>
-                <div class="locator-row">
-                    <input id="globalTransactionId" type="search" placeholder="输入交易 ID，例如 35">
-                    <button onclick="locateTransactionById()">定位账目</button>
-                </div>
-            </div>
-            <div class="migration-box">
-                <h3>旧数据迁移</h3>
-                <p class="meta">输入旧版 API Token，把旧账单绑定到当前账号。</p>
-                <div class="migration-row">
-                    <input id="legacyToken" type="password" placeholder="输入旧版 API Token">
-                    <button class="secondary" onclick="migrateLegacyData()">迁移旧数据</button>
-                </div>
-            </div>
-        </div>
-    </section>
-    <section class="card dashboard">
-        <div class="section-title">
-            <h2>月份账目</h2>
-            <span id="activeMonthLabel" class="meta"></span>
-        </div>
-        <div class="filter-grid">
-            <label>月份
-                <input id="monthFilter" type="month" onchange="loadDashboard()">
-            </label>
-            <label>搜索商户
-                <input id="merchantSearch" type="search" placeholder="输入商户关键字" oninput="renderTransactions()">
-            </label>
-            <label>交易 ID
-                <input id="transactionIdSearch" type="search" placeholder="例如 33" oninput="renderTransactions()">
-            </label>
-            <label>类型筛选
-                <select id="typeFilter" onchange="updateCategoryFilterOptions(); renderTransactions()">
-                    <option value="">全部类型</option>
-                    <option value="支出">支出</option>
-                    <option value="收入">收入</option>
-                </select>
-            </label>
-            <label>分类筛选
-                <select id="categoryFilter" onchange="renderTransactions()">
-                    <option value="">全部分类</option>
-                </select>
-            </label>
-        </div>
-        <div id="summary">加载中...</div>
-    </section>
-    <section class="card dashboard">
-        <div class="section-title">
-            <h2>最近账目</h2>
-            <span class="meta">可按商户、ID、类型和分类筛选</span>
-        </div>
-        <div class="toolbar">
-            <label>
-                <input id="reviewOnly" type="checkbox" onchange="renderTransactions()">
-                只看需复核
-            </label>
-            <span class="meta">金额、分类和状态会在每次刷新后同步。</span>
-        </div>
-        <div id="transactions">加载中...</div>
-    </section>
-</main>
-<div id="editorBackdrop" class="modal-backdrop">
-    <div class="modal">
-        <h2>编辑账目</h2>
-        <div class="modal-grid">
-            <label>日期
-                <input id="editDate" type="date">
-            </label>
-            <label>金额
-                <input id="editAmount" type="number" step="0.01" min="0">
-            </label>
-            <label>商户
-                <input id="editMerchant" type="text">
-            </label>
-            <label>类型
-                <select id="editType" onchange="updateEditCategoryOptions()">
-                    <option value="支出">支出</option>
-                    <option value="收入">收入</option>
-                </select>
-            </label>
-            <label>分类
-                <select id="editCategory">
-                </select>
-            </label>
-            <label>状态
-                <select id="editStatus">
-                    <option value="PROCESSED">已处理</option>
-                    <option value="NEEDS_REVIEW">需复核</option>
-                    <option value="FAILED">失败</option>
-                </select>
-            </label>
-        </div>
-        <div class="modal-actions">
-            <button class="muted" onclick="closeEditor()">取消</button>
-            <button onclick="saveTransaction()">保存</button>
+            <input id="token" type="hidden">
         </div>
     </div>
 </div>
-<div id="detailBackdrop" class="modal-backdrop">
-    <div class="modal">
-        <h2>AI 识别详情</h2>
-        <div class="detail-block">
-            <h3>原始文本</h3>
-            <pre id="detailRawText" class="detail-pre"></pre>
+
+<!-- APP SHELL -->
+<div id="appShell" class="hidden min-h-screen flex">
+    <!-- Sidebar -->
+    <aside id="sidebar" class="fixed lg:sticky top-0 left-0 z-30 h-screen w-60 bg-white border-r border-clay-100 flex-shrink-0 flex flex-col transition-transform -translate-x-full lg:translate-x-0 shadow-sm">
+        <div class="h-16 flex items-center gap-3 px-5 border-b border-clay-100">
+            <div class="w-9 h-9 rounded-2xl bg-coral-500 flex items-center justify-center"><span class="text-white text-xs font-extrabold tracking-tighter">AB</span></div>
+            <div><span class="text-sm font-bold text-clay-800 block leading-tight">AutoBookkeeper</span><span class="text-[11px] text-clay-400">AI 记账助手</span></div>
         </div>
-        <div class="detail-block">
-            <h3>结构化 JSON</h3>
-            <pre id="detailStructuredJson" class="detail-pre"></pre>
+        <nav class="flex-1 p-4 space-y-1">
+            <a onclick="go('dashboard')" data-nav="dashboard" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm cursor-pointer text-clay-500 hover:bg-clay-50 hover:text-clay-700 transition-all">
+                <i data-lucide="home" class="w-[18px] h-[18px]" stroke-width="1.5"></i> 首页
+            </a>
+            <a onclick="go('account')" data-nav="account" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm cursor-pointer text-clay-500 hover:bg-clay-50 hover:text-clay-700 transition-all">
+                <i data-lucide="user-cog" class="w-[18px] h-[18px]" stroke-width="1.5"></i> 账号设置
+            </a>
+        </nav>
+        <div class="p-4 border-t border-clay-100">
+            <div class="flex items-center gap-3 px-3 py-2 mb-2">
+                <div id="sbAva" class="w-8 h-8 rounded-full bg-coral-100 text-coral-600 grid place-items-center text-xs font-bold"></div>
+                <div class="min-w-0"><div id="sbUser" class="text-sm font-semibold text-clay-800 truncate"></div><div class="text-[11px] text-clay-400">在线</div></div>
+            </div>
+            <button onclick="logout()" class="w-full flex items-center gap-2.5 px-3 py-2 rounded-2xl text-sm text-clay-400 hover:bg-coral-50 hover:text-coral-600 transition-all cursor-pointer">
+                <i data-lucide="log-out" class="w-4 h-4" stroke-width="1.5"></i> 退出登录
+            </button>
         </div>
-        <div class="modal-actions">
-            <button class="muted" onclick="closeDetails()">关闭</button>
+    </aside>
+    <div id="sidebarOverlay" onclick="toggleSB()" class="fixed inset-0 z-20 bg-black/30 backdrop-blur-sm hidden lg:hidden"></div>
+
+    <div class="flex-1 flex flex-col min-w-0">
+        <header class="sticky top-0 z-20 h-16 bg-white/70 backdrop-blur-xl border-b border-clay-100 flex items-center px-4 sm:px-6 justify-between">
+            <button onclick="toggleSB()" class="lg:hidden p-2 rounded-xl hover:bg-clay-100 transition-colors cursor-pointer"><i data-lucide="menu" class="w-5 h-5 text-clay-500" stroke-width="1.5"></i></button>
+            <div class="hidden lg:block"></div>
+            <div class="flex items-center gap-3">
+                <span id="hdrUser" class="text-sm font-medium text-clay-500"></span>
+                <div id="hdrAva" class="w-8 h-8 rounded-full bg-coral-100 text-coral-600 grid place-items-center text-xs font-bold"></div>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-auto p-4 sm:p-6 lg:p-8 space-y-6 fade-up">
+
+            <!-- DASHBOARD -->
+            <div id="page-dashboard" class="page-content space-y-6">
+                <div class="flex items-center justify-between">
+                    <div><h1 class="text-xl font-extrabold text-clay-900 tracking-tight">你好，<span id="wName" class="text-coral-500"></span> 👋</h1><p class="text-sm text-clay-400 mt-0.5">今天也要好好记账呀</p></div>
+                </div>
+
+                <!-- Token -->
+                <div class="bg-white rounded-3xl border border-clay-100 p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-4">
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 rounded-2xl bg-sand-100 grid place-items-center"><i data-lucide="key-round" class="w-5 h-5 text-sand-600" stroke-width="1.5"></i></div>
+                            <div><div class="text-sm font-bold text-clay-800">API Token</div><div class="text-[11px] text-clay-400">iPhone 快捷指令 · X-API-Token</div></div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="toggleTkn()" class="h-8 px-3 text-xs font-semibold text-clay-500 bg-clay-50 border border-clay-200 rounded-xl hover:bg-clay-100 transition-all flex items-center gap-1.5 cursor-pointer"><i data-lucide="eye" class="w-3.5 h-3.5" id="tknEye" stroke-width="1.5"></i><span id="tknLbl">显示</span></button>
+                            <button onclick="copyTkn()" class="h-8 px-3 text-xs font-bold text-white bg-coral-500 rounded-xl hover:bg-coral-600 transition-all flex items-center gap-1.5 shadow-sm shadow-coral-500/20 cursor-pointer"><i data-lucide="copy" class="w-3.5 h-3.5" stroke-width="1.5"></i> 复制</button>
+                        </div>
+                    </div>
+                    <code id="tknDisp" class="block text-sm font-mono text-clay-600 break-all bg-clay-50 rounded-2xl px-4 py-3 border border-clay-100 tk-blur select-none">加载中...</code>
+                </div>
+
+                <div id="dashNotice" class="hidden text-sm text-coral-700 bg-coral-50 border border-coral-200 rounded-2xl px-4 py-3"></div>
+
+                <!-- Quick -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="bg-white rounded-3xl border border-clay-100 p-5 shadow-sm">
+                        <div class="flex items-center gap-2.5 mb-2"><div class="w-8 h-8 rounded-xl bg-sage-50 grid place-items-center"><i data-lucide="search" class="w-4 h-4 text-sage-600" stroke-width="1.5"></i></div><h3 class="text-sm font-bold text-clay-800">快速定位</h3></div>
+                        <p class="text-xs text-clay-400 mb-3">输入交易 ID 跳到对应月份</p>
+                        <div class="flex gap-2">
+                            <input id="locId" type="search" placeholder="交易 ID" class="flex-1 h-10 px-3.5 text-sm bg-clay-50 border border-clay-200 rounded-xl text-clay-800 placeholder-clay-300 outline-none focus:border-coral-400 focus:ring-2 focus:ring-coral-100 transition-all">
+                            <button onclick="locateTx()" class="h-10 px-5 text-xs font-bold bg-coral-500 text-white rounded-xl hover:bg-coral-600 transition-all shadow-sm shadow-coral-500/20 cursor-pointer">定位</button>
+                        </div>
+                    </div>
+                    <div class="bg-white rounded-3xl border border-clay-100 p-5 shadow-sm">
+                        <div class="flex items-center gap-2.5 mb-2"><div class="w-8 h-8 rounded-xl bg-sand-100 grid place-items-center"><i data-lucide="database" class="w-4 h-4 text-sand-600" stroke-width="1.5"></i></div><h3 class="text-sm font-bold text-clay-800">旧数据迁移</h3></div>
+                        <p class="text-xs text-clay-400 mb-3">用旧版 Token 迁移账单</p>
+                        <div class="flex gap-2">
+                            <input id="legacyTkn" type="password" placeholder="旧版 Token" class="flex-1 h-10 px-3.5 text-sm bg-clay-50 border border-clay-200 rounded-xl text-clay-800 placeholder-clay-300 outline-none focus:border-coral-400 focus:ring-2 focus:ring-coral-100 transition-all">
+                            <button onclick="migrate()" class="h-10 px-5 text-xs font-bold bg-clay-800 text-white rounded-xl hover:bg-clay-900 transition-all cursor-pointer">迁移</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Summary -->
+                <div class="bg-white rounded-3xl border border-clay-100 p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-5">
+                        <h2 class="text-base font-extrabold text-clay-900 tracking-tight">月份账目</h2>
+                        <span id="monthLbl" class="text-xs text-clay-400 font-medium"></span>
+                    </div>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 mb-5">
+                        <div><label class="block text-[11px] font-semibold text-clay-400 uppercase tracking-wider mb-1.5">月份</label><input id="monthF" type="month" onchange="loadDash()" class="w-full h-10 px-3 text-sm bg-clay-50 border border-clay-200 rounded-xl text-clay-800 outline-none focus:border-coral-400 transition-all"></div>
+                        <div><label class="block text-[11px] font-semibold text-clay-400 uppercase tracking-wider mb-1.5">商户</label><input id="merchF" type="search" placeholder="关键字" oninput="renderTx()" class="w-full h-10 px-3 text-sm bg-clay-50 border border-clay-200 rounded-xl text-clay-800 placeholder-clay-300 outline-none focus:border-coral-400 transition-all"></div>
+                        <div><label class="block text-[11px] font-semibold text-clay-400 uppercase tracking-wider mb-1.5">ID</label><input id="idF" type="search" placeholder="例如 33" oninput="renderTx()" class="w-full h-10 px-3 text-sm bg-clay-50 border border-clay-200 rounded-xl text-clay-800 placeholder-clay-300 outline-none focus:border-coral-400 transition-all"></div>
+                        <div><label class="block text-[11px] font-semibold text-clay-400 uppercase tracking-wider mb-1.5">类型</label><select id="typeF" onchange="updCatF();renderTx()" class="w-full h-10 px-3 text-sm bg-clay-50 border border-clay-200 rounded-xl text-clay-800 outline-none focus:border-coral-400 transition-all appearance-none"><option value="">全部</option><option value="支出">支出</option><option value="收入">收入</option></select></div>
+                        <div><label class="block text-[11px] font-semibold text-clay-400 uppercase tracking-wider mb-1.5">分类</label><select id="catF" onchange="renderTx()" class="w-full h-10 px-3 text-sm bg-clay-50 border border-clay-200 rounded-xl text-clay-800 outline-none focus:border-coral-400 transition-all appearance-none"><option value="">全部</option></select></div>
+                    </div>
+                    <div id="summary"><div class="flex items-center gap-2 text-clay-400 py-10 justify-center"><div class="w-5 h-5 border-2 border-clay-200 border-t-coral-500 rounded-full animate-spin"></div><span class="text-sm">加载中...</span></div></div>
+                </div>
+
+                <!-- Transactions -->
+                <div class="bg-white rounded-3xl border border-clay-100 p-6 shadow-sm">
+                    <div class="flex items-center justify-between mb-5">
+                        <h2 class="text-base font-extrabold text-clay-900 tracking-tight">最近账目</h2>
+                        <label class="flex items-center gap-2 cursor-pointer select-none"><input id="revOnly" type="checkbox" onchange="renderTx()" class="w-4 h-4 rounded-lg border-clay-300 text-coral-500 focus:ring-coral-200"><span class="text-xs font-semibold text-clay-400">只看需复核</span></label>
+                    </div>
+                    <div id="txList"><div class="flex items-center gap-2 text-clay-400 py-10 justify-center"><div class="w-5 h-5 border-2 border-clay-200 border-t-coral-500 rounded-full animate-spin"></div><span class="text-sm">加载中...</span></div></div>
+                </div>
+            </div>
+
+            <!-- ACCOUNT -->
+            <div id="page-account" class="page-content hidden space-y-6">
+                <div><h1 class="text-xl font-extrabold text-clay-900 tracking-tight">账号设置</h1><p class="text-sm text-clay-400 mt-0.5">管理你的账号信息</p></div>
+
+                <div class="bg-white rounded-3xl border border-clay-100 overflow-hidden shadow-sm">
+                    <div class="h-24 bg-gradient-to-r from-coral-400 via-coral-500 to-sand-500"></div>
+                    <div class="px-6 pb-6 -mt-8">
+                        <div id="pAva" class="w-16 h-16 rounded-2xl bg-white border-4 border-white shadow-lg grid place-items-center text-2xl font-extrabold text-coral-500 mb-4"></div>
+                        <div class="space-y-0 divide-y divide-clay-100">
+                            <div class="flex items-center justify-between py-4"><div class="text-xs text-clay-400 font-medium">用户名</div><div id="pUser" class="text-sm font-bold text-clay-800">-</div></div>
+                            <div class="flex items-center justify-between py-4"><div class="text-xs text-clay-400 font-medium">Owner Key</div><div id="pKey" class="text-xs font-mono text-clay-400">-</div></div>
+                            <div class="flex items-center justify-between py-4"><div class="text-xs text-clay-400 font-medium">API Token</div><div id="pTkn" class="text-xs font-mono text-clay-400 max-w-[200px] truncate">-</div></div>
+                            <div class="flex items-center justify-between py-4"><div class="text-xs text-clay-400 font-medium">注册时间</div><div id="pDate" class="text-sm text-clay-600">-</div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-3xl border border-clay-100 p-6 shadow-sm">
+                    <div class="flex items-center gap-2.5 mb-1"><i data-lucide="lock" class="w-4 h-4 text-clay-400" stroke-width="1.5"></i><h3 class="text-sm font-bold text-clay-800">修改密码</h3></div>
+                    <p class="text-xs text-clay-400 mb-5">定期更换密码提高安全性</p>
+                    <div id="pwN" class="hidden text-sm text-coral-700 bg-coral-50 border border-coral-200 rounded-2xl px-4 py-3 mb-4"></div>
+                    <div id="pwS" class="hidden text-sm text-sage-700 bg-sage-50 border border-sage-200 rounded-2xl px-4 py-3 mb-4"></div>
+                    <div class="space-y-3 max-w-sm">
+                        <div><label class="block text-xs font-semibold text-clay-500 mb-1.5">当前密码</label><input id="curPw" type="password" class="w-full h-11 px-4 text-sm bg-clay-50 border border-clay-200 rounded-2xl text-clay-800 placeholder-clay-300 outline-none focus:border-coral-400 focus:ring-2 focus:ring-coral-100 transition-all" placeholder="输入当前密码"></div>
+                        <div><label class="block text-xs font-semibold text-clay-500 mb-1.5">新密码</label><input id="newPw" type="password" class="w-full h-11 px-4 text-sm bg-clay-50 border border-clay-200 rounded-2xl text-clay-800 placeholder-clay-300 outline-none focus:border-coral-400 focus:ring-2 focus:ring-coral-100 transition-all" placeholder="至少 6 位"></div>
+                        <div><label class="block text-xs font-semibold text-clay-500 mb-1.5">确认密码</label><input id="cfmPw" type="password" class="w-full h-11 px-4 text-sm bg-clay-50 border border-clay-200 rounded-2xl text-clay-800 placeholder-clay-300 outline-none focus:border-coral-400 focus:ring-2 focus:ring-coral-100 transition-all" placeholder="再次输入"></div>
+                        <button onclick="chgPw()" class="h-11 px-6 bg-coral-500 hover:bg-coral-600 text-white text-sm font-bold rounded-2xl transition-all shadow-lg shadow-coral-500/20 cursor-pointer">保存密码</button>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- Edit Modal -->
+<div id="editBg" class="fixed inset-0 bg-clay-900/30 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto border border-clay-100">
+        <div class="p-6 border-b border-clay-100"><h2 class="text-base font-extrabold text-clay-900 tracking-tight">编辑账目</h2></div>
+        <div class="p-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <div><label class="block text-[11px] font-semibold text-clay-400 uppercase tracking-wider mb-1.5">日期</label><input id="eDate" type="date" class="w-full h-10 px-3 text-sm bg-clay-50 border border-clay-200 rounded-xl text-clay-800 outline-none focus:border-coral-400 transition-all"></div>
+            <div><label class="block text-[11px] font-semibold text-clay-400 uppercase tracking-wider mb-1.5">金额</label><input id="eAmt" type="number" step="0.01" min="0" class="w-full h-10 px-3 text-sm bg-clay-50 border border-clay-200 rounded-xl text-clay-800 outline-none focus:border-coral-400 transition-all"></div>
+            <div><label class="block text-[11px] font-semibold text-clay-400 uppercase tracking-wider mb-1.5">商户</label><input id="eMerch" type="text" class="w-full h-10 px-3 text-sm bg-clay-50 border border-clay-200 rounded-xl text-clay-800 outline-none focus:border-coral-400 transition-all"></div>
+            <div><label class="block text-[11px] font-semibold text-clay-400 uppercase tracking-wider mb-1.5">类型</label><select id="eType" onchange="updECat()" class="w-full h-10 px-3 text-sm bg-clay-50 border border-clay-200 rounded-xl text-clay-800 outline-none focus:border-coral-400 transition-all appearance-none"><option value="支出">支出</option><option value="收入">收入</option></select></div>
+            <div><label class="block text-[11px] font-semibold text-clay-400 uppercase tracking-wider mb-1.5">分类</label><select id="eCat" class="w-full h-10 px-3 text-sm bg-clay-50 border border-clay-200 rounded-xl text-clay-800 outline-none focus:border-coral-400 transition-all appearance-none"></select></div>
+            <div><label class="block text-[11px] font-semibold text-clay-400 uppercase tracking-wider mb-1.5">状态</label><select id="eStat" class="w-full h-10 px-3 text-sm bg-clay-50 border border-clay-200 rounded-xl text-clay-800 outline-none focus:border-coral-400 transition-all appearance-none"><option value="PROCESSED">已处理</option><option value="NEEDS_REVIEW">需复核</option><option value="FAILED">失败</option></select></div>
+        </div>
+        <div class="p-6 pt-0 flex justify-end gap-2">
+            <button onclick="closeEd()" class="h-10 px-5 text-xs font-semibold text-clay-500 bg-clay-100 rounded-xl hover:bg-clay-200 transition-all cursor-pointer">取消</button>
+            <button onclick="saveTx()" class="h-10 px-5 text-xs font-bold text-white bg-coral-500 rounded-xl hover:bg-coral-600 transition-all shadow-sm shadow-coral-500/20 cursor-pointer">保存</button>
         </div>
     </div>
 </div>
+
+<!-- Detail Modal -->
+<div id="detBg" class="fixed inset-0 bg-clay-900/30 backdrop-blur-sm hidden items-center justify-center p-4 z-50">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-auto border border-clay-100">
+        <div class="p-6 border-b border-clay-100"><h2 class="text-base font-extrabold text-clay-900 tracking-tight">AI 识别详情</h2></div>
+        <div class="p-6 space-y-4">
+            <div><h3 class="text-[11px] font-semibold text-clay-400 uppercase tracking-wider mb-2">原始文本</h3><pre id="dRaw" class="max-h-48 overflow-auto bg-clay-900 text-clay-300 rounded-2xl p-4 text-xs leading-relaxed"></pre></div>
+            <div><h3 class="text-[11px] font-semibold text-clay-400 uppercase tracking-wider mb-2">结构化 JSON</h3><pre id="dJson" class="max-h-48 overflow-auto bg-clay-900 text-clay-300 rounded-2xl p-4 text-xs leading-relaxed"></pre></div>
+        </div>
+        <div class="p-6 pt-0 flex justify-end"><button onclick="closeDet()" class="h-10 px-5 text-xs font-semibold text-clay-500 bg-clay-100 rounded-xl hover:bg-clay-200 transition-all cursor-pointer">关闭</button></div>
+    </div>
+</div>
+
 <script>
-    const tokenInput = document.getElementById('token');
-    tokenInput.value = localStorage.getItem('autobookkeeper-token') || '';
-    if (tokenInput.value && !localStorage.getItem('autobookkeeper-username')) {
-        localStorage.removeItem('autobookkeeper-token');
-        tokenInput.value = '';
-    }
-    updateAccountStatus();
-    document.getElementById('monthFilter').value = currentMonth();
-    const categoriesByType = {
-        '支出': ['餐饮', '交通', '购物', '住房', '医疗', '娱乐', '生活缴费', '转账', '其他', '未分类'],
-        '收入': ['工资', '奖金', '报销', '退款', '转账收入', '其他收入']
-    };
-    let editingTransactionId = null;
-    let latestTransactions = [];
-    let highlightedTransactionId = null;
+    lucide.createIcons();
+    const TI=document.getElementById('token');TI.value=localStorage.getItem('ab-tk')||'';if(TI.value&&!localStorage.getItem('ab-un')){localStorage.removeItem('ab-tk');TI.value='';}
+    document.getElementById('monthF').value=curM();
+    const CAT={'支出':['餐饮','交通','购物','住房','医疗','娱乐','生活缴费','转账','其他','未分类'],'收入':['工资','奖金','报销','退款','转账收入','其他收入']};
+    let editId=null,allTx=[],hlId=null,tknShown=false;
 
-    function showRegister() {
-        document.getElementById('authTitle').textContent = '注册';
-        document.getElementById('loginPanel').style.display = 'none';
-        document.getElementById('registerPanel').style.display = '';
-        hideNotice();
-    }
+    function go(p){document.querySelectorAll('.page-content').forEach(e=>e.classList.add('hidden'));document.getElementById('page-'+p).classList.remove('hidden');document.querySelectorAll('.nav-item').forEach(e=>{e.classList.remove('nav-on');e.classList.add('text-clay-500');});const a=document.querySelector(`[data-nav="${p}"]`);if(a){a.classList.add('nav-on');a.classList.remove('text-clay-500');}if(window.innerWidth<1024)toggleSB();if(p==='account')loadAcct();}
+    function toggleSB(){document.getElementById('sidebar').classList.toggle('-translate-x-full');document.getElementById('sidebarOverlay').classList.toggle('hidden');}
+    function toggleTkn(){tknShown=!tknShown;document.getElementById('tknDisp').classList.toggle('show',tknShown);document.getElementById('tknLbl').textContent=tknShown?'隐藏':'显示';}
+    async function copyTkn(){const t=localStorage.getItem('ab-tk');if(!t)return;await navigator.clipboard.writeText(t);showDN('已复制 ✓');setTimeout(hideDN,2000);}
 
-    function showLogin() {
-        document.getElementById('authTitle').textContent = '登录';
-        document.getElementById('registerPanel').style.display = 'none';
-        document.getElementById('loginPanel').style.display = '';
-        hideNotice();
-    }
+    function showReg(){document.getElementById('authTitle').textContent='创建账号 ✨';document.getElementById('authSub').textContent='注册后开始使用';document.getElementById('loginPanel').classList.add('hidden');document.getElementById('regPanel').classList.remove('hidden');hideN();}
+    function showLogin(){document.getElementById('authTitle').textContent='欢迎回来 👋';document.getElementById('authSub').textContent='登录你的账号开始记账';document.getElementById('regPanel').classList.add('hidden');document.getElementById('loginPanel').classList.remove('hidden');hideN();}
+    async function regAccount(){await auth('/api/auth/register',{username:document.getElementById('regUser').value,password:document.getElementById('regPass').value,inviteCode:document.getElementById('regCode').value});}
+    async function loginAccount(){await auth('/api/auth/login',{username:document.getElementById('loginUsername').value,password:document.getElementById('loginPassword').value});}
+    async function auth(url,p){hideN();try{const r=await fetch(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});if(!r.ok)throw new Error(r.status===400?'用户名至少3位，密码至少6位':r.status===401?'用户名或密码错误':r.status===403?'邀请码错误':r.status===409?'用户名已存在':'操作失败');const d=await r.json();localStorage.setItem('ab-tk',d.token);localStorage.setItem('ab-un',d.username);TI.value=d.token;updUI();hideN();refresh();}catch(e){showN(e.message);}}
+    function logout(){localStorage.removeItem('ab-tk');localStorage.removeItem('ab-un');TI.value='';allTx=[];updUI();refresh();}
+    function resetS(){localStorage.removeItem('ab-tk');localStorage.removeItem('ab-un');TI.value='';allTx=[];updUI();refresh();}
+    function updUI(){const u=localStorage.getItem('ab-un'),t=localStorage.getItem('ab-tk');const ini=u?u.charAt(0).toUpperCase():'';['hdrAva','sbAva','pAva'].forEach(id=>document.getElementById(id).textContent=ini);['hdrUser','sbUser','wName'].forEach(id=>document.getElementById(id).textContent=u||'');document.getElementById('pUser').textContent=u||'-';document.getElementById('pTkn').textContent=t||'-';document.getElementById('tknDisp').textContent=t||'未获取';}
+    function refresh(){const a=Boolean(localStorage.getItem('ab-tk')&&localStorage.getItem('ab-un'));document.getElementById('authPage').classList.toggle('hidden',a);document.getElementById('appShell').classList.toggle('hidden',!a);if(a){go('dashboard');loadDash();}}
 
-    async function registerAccount() {
-        await authenticate('/api/auth/register', {
-            username: document.getElementById('registerUsername').value,
-            password: document.getElementById('registerPassword').value,
-            inviteCode: document.getElementById('registerInviteCode').value
-        });
-    }
+    function showN(m){const el=document.getElementById('notice');el.textContent=m;el.classList.remove('hidden');}
+    function hideN(){document.getElementById('notice').textContent='';document.getElementById('notice').classList.add('hidden');}
+    function showDN(m){const el=document.getElementById('dashNotice');el.textContent=m;el.classList.remove('hidden');}
+    function hideDN(){document.getElementById('dashNotice').textContent='';document.getElementById('dashNotice').classList.add('hidden');}
 
-    async function loginAccount() {
-        await authenticate('/api/auth/login', {
-            username: document.getElementById('loginUsername').value,
-            password: document.getElementById('loginPassword').value
-        });
-    }
+    async function locateTx(){const id=document.getElementById('locId').value.trim(),t=localStorage.getItem('ab-tk');if(!id){showDN('请输入交易 ID');return;}try{const i=await fetchTx(id,t);if(i.transactionDate)document.getElementById('monthF').value=i.transactionDate.slice(0,7);document.getElementById('idF').value=id;hlId=String(id);await loadDash();document.getElementById('txList').scrollIntoView({behavior:'smooth',block:'start'});showDN(`已定位 ID ${id}`);}catch(e){showDN('未找到');}}
+    async function migrate(){const t=localStorage.getItem('ab-tk'),lt=document.getElementById('legacyTkn').value;if(!t){showDN('请先登录');return;}try{const r=await fetch('/api/auth/migrate-legacy',{method:'POST',headers:{'Content-Type':'application/json','X-API-Token':t},body:JSON.stringify({legacyToken:lt})});if(!r.ok)throw new Error(r.status===403?'旧 Token 不正确':'迁移失败');const d=await r.json();showDN(`迁移完成：${d.migratedCount} 条`);loadDash();}catch(e){showDN(e.message);}}
+    function loadDash(){loadSum();loadTx();}
+    function curM(){const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;}
+    function selM(){return document.getElementById('monthF').value||curM();}
 
-    async function authenticate(url, payload) {
-        hideNotice();
-        try {
-            const response = await fetch(url, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-            if (!response.ok) throw new Error(response.status === 400 ? '用户名至少 3 位，密码至少 6 位。' : response.status === 401 ? '用户名或密码错误。' : response.status === 403 ? '邀请码错误。' : response.status === 409 ? '用户名已存在。' : '账号操作失败。');
-            const data = await response.json();
-            localStorage.setItem('autobookkeeper-token', data.token);
-            localStorage.setItem('autobookkeeper-username', data.username);
-            tokenInput.value = data.token;
-            updateAccountStatus();
-            hideNotice();
-            refreshVisibility();
-        } catch (error) {
-            showNotice(error.message);
-        }
-    }
+    async function loadSum(){const h={};const t=localStorage.getItem('ab-tk');if(t)h['X-API-Token']=t;const c=document.getElementById('summary');document.getElementById('monthLbl').textContent=selM();try{const r=await fetch(`/api/transactions/summary?month=${selM()}`,{headers:h});if(r.status===401){resetS();throw new Error('登录已失效');}if(!r.ok)throw new Error('加载失败');const d=await r.json();const ec=(d.expenseCategorySummaries||[]).map(i=>`<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-coral-50 text-coral-600 border border-coral-100">支出 · ${esc(i.category)} ¥${i.amount}</span>`).join('');const ic=(d.incomeCategorySummaries||[]).map(i=>`<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-sage-50 text-sage-700 border border-sage-200">收入 · ${esc(i.category)} ¥${i.amount}</span>`).join('');c.innerHTML=`<div class="grid grid-cols-3 gap-3 mb-4"><div class="bg-sage-50 rounded-2xl border border-sage-100 p-4"><div class="text-[11px] font-bold text-clay-400 uppercase tracking-wider">收入</div><div class="text-2xl font-extrabold text-sage-600 mt-2 tracking-tight">+¥${d.incomeTotal||0}</div></div><div class="bg-coral-50 rounded-2xl border border-coral-100 p-4"><div class="text-[11px] font-bold text-clay-400 uppercase tracking-wider">支出</div><div class="text-2xl font-extrabold text-coral-500 mt-2 tracking-tight">-¥${d.expenseTotal||0}</div></div><div class="bg-sand-50 rounded-2xl border border-sand-200 p-4"><div class="text-[11px] font-bold text-clay-400 uppercase tracking-wider">结余</div><div class="text-2xl font-extrabold text-sand-600 mt-2 tracking-tight">¥${d.balance||0}</div></div></div><div class="flex flex-wrap gap-1.5">${ic}${ec||'<span class="text-xs text-clay-400">暂无</span>'}</div>`;}catch(e){c.innerHTML='<p class="text-sm text-clay-400 text-center py-6">加载失败</p>';showDN(e.message);}}
 
-    function logoutAccount() {
-        localStorage.removeItem('autobookkeeper-token');
-        localStorage.removeItem('autobookkeeper-username');
-        tokenInput.value = '';
-        updateAccountStatus();
-        latestTransactions = [];
-        document.getElementById('summary').innerHTML = '<p class="meta">请先登录。</p>';
-        document.getElementById('transactions').innerHTML = '<p class="meta">请先登录。</p>';
-        refreshVisibility();
-    }
+    async function loadTx(){const h={};const t=localStorage.getItem('ab-tk');if(t)h['X-API-Token']=t;try{const r=await fetch(`/api/transactions?month=${selM()}&page=0&size=100`,{headers:h});if(r.status===401){resetS();throw new Error('登录已失效');}if(!r.ok)throw new Error('加载失败');const d=await r.json();allTx=d.content||[];renderTx();}catch(e){document.getElementById('txList').innerHTML='<p class="text-sm text-clay-400 text-center py-6">加载失败</p>';}}
 
-    function resetInvalidSession() {
-        localStorage.removeItem('autobookkeeper-token');
-        localStorage.removeItem('autobookkeeper-username');
-        tokenInput.value = '';
-        latestTransactions = [];
-        updateAccountStatus();
-        refreshVisibility();
-    }
+    function renderTx(){const c=document.getElementById('txList'),ro=document.getElementById('revOnly').checked,mq=document.getElementById('merchF').value.trim().toLowerCase(),iq=document.getElementById('idF').value.trim(),tp=document.getElementById('typeF').value,ct=document.getElementById('catF').value;const rows=allTx.filter(i=>{if(ro&&i.status!=='NEEDS_REVIEW')return false;if(tp&&i.type!==tp)return false;if(ct&&i.category!==ct)return false;if(iq&&String(i.id)!==iq)return false;if(mq&&!String(i.merchant||'').toLowerCase().includes(mq))return false;return true;});if(!rows.length){c.innerHTML=ro?'<div class="border-2 border-dashed border-clay-200 rounded-2xl p-8 text-center"><p class="text-sm text-clay-400">暂无需复核账目</p></div>':'<div class="border-2 border-dashed border-clay-200 rounded-2xl p-8 text-center"><p class="text-sm text-clay-400">当前月份暂无账目</p></div>';return;}c.innerHTML=`<div class="space-y-2.5">${rows.map(i=>{const tp=i.type||'支出',inc=tp==='收入',ac=inc?'text-sage-600':'text-coral-500',ap=inc?'+':'-',hl=String(i.id)===hlId,sb=i.status==='NEEDS_REVIEW'?'<span class="text-[10px] font-bold text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-2 py-0.5">需复核</span>':i.status==='PROCESSED'?'<span class="text-[10px] font-bold text-sage-700 bg-sage-50 border border-sage-200 rounded-lg px-2 py-0.5">已处理</span>':`<span class="text-[10px] font-medium text-clay-500 bg-clay-100 rounded-lg px-2 py-0.5">${i.status}</span>`;return `<div class="bg-white rounded-2xl border ${hl?'border-amber-300':'border-clay-100'} p-4 group hover:border-clay-200 hover:shadow-sm transition-all"><div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3"><div class="min-w-0"><div class="font-bold text-sm text-clay-800 truncate">${esc(i.merchant)}</div><div class="flex flex-wrap items-center gap-x-2 gap-y-1 mt-1.5"><span class="text-[11px] text-clay-400">ID ${i.id}</span><span class="text-[11px] text-clay-400">${i.transactionDate||''}</span><span class="text-[11px] text-clay-400">${tp}</span><span class="text-[11px] text-clay-400">${esc(i.category)}</span>${sb}</div></div><div class="flex items-center gap-3"><div class="text-lg font-extrabold ${ac} whitespace-nowrap">${ap}¥${i.amount}</div><div class="flex flex-wrap gap-1.5 opacity-0 group-hover:opacity-100 transition-opacity"><select class="h-7 px-1.5 text-[11px] bg-clay-50 border border-clay-200 rounded-lg text-clay-600 outline-none" onchange="quickCat(${i.id},this.value)">${catO(tp,i.category)}</select><button onclick="editTx(${i.id})" class="h-7 px-2 text-[11px] font-medium text-clay-500 bg-clay-100 rounded-lg hover:bg-clay-200 cursor-pointer">编辑</button><button onclick="showDet(${i.id})" class="h-7 px-2 text-[11px] font-medium text-clay-500 bg-clay-100 rounded-lg hover:bg-clay-200 cursor-pointer">详情</button>${i.status==='NEEDS_REVIEW'?`<button onclick="markDone(${i.id})" class="h-7 px-2 text-[11px] font-bold text-white bg-coral-500 rounded-lg hover:bg-coral-600 cursor-pointer">已处理</button>`:''}<button onclick="delTx(${i.id})" class="h-7 px-2 text-[11px] font-medium text-coral-500 bg-coral-50 rounded-lg hover:bg-coral-100 cursor-pointer">删除</button></div></div></div></div>`;}).join('')}</div>`;}
 
-    async function copyToken() {
-        const token = localStorage.getItem('autobookkeeper-token');
-        if (!token) {
-            showNotice('请先登录或保存 Token。');
-            return;
-        }
-        await navigator.clipboard.writeText(token);
-        showNotice('Token 已复制，可粘贴到 iPhone 快捷指令的 X-API-Token。');
-    }
+    async function markDone(id){try{const t=localStorage.getItem('ab-tk'),i=await fetchTx(id,t);await fetch(`/api/transactions/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json',...(t?{'X-API-Token':t}:{})},body:JSON.stringify({transactionDate:i.transactionDate,amount:i.amount,merchant:i.merchant,type:i.type||'支出',category:i.category,status:'PROCESSED'})});loadDash();}catch(e){showDN('操作失败');}}
+    async function quickCat(id,cat){try{const t=localStorage.getItem('ab-tk'),i=await fetchTx(id,t);await fetch(`/api/transactions/${id}`,{method:'PATCH',headers:{'Content-Type':'application/json',...(t?{'X-API-Token':t}:{})},body:JSON.stringify({transactionDate:i.transactionDate,amount:i.amount,merchant:i.merchant,type:i.type||'支出',category:cat,status:i.status})});hideDN();loadDash();}catch(e){showDN('保存失败');}}
+    async function editTx(id){try{const t=localStorage.getItem('ab-tk'),i=await fetchTx(id,t);editId=id;document.getElementById('eDate').value=i.transactionDate||'';document.getElementById('eAmt').value=i.amount||'';document.getElementById('eMerch').value=i.merchant||'';document.getElementById('eType').value=i.type||'支出';updECat(i.category||'其他');document.getElementById('eStat').value=i.status||'NEEDS_REVIEW';const bd=document.getElementById('editBg');bd.classList.remove('hidden');bd.classList.add('flex');}catch(e){showDN(e.message);}}
+    function closeEd(){editId=null;const bd=document.getElementById('editBg');bd.classList.add('hidden');bd.classList.remove('flex');}
+    async function showDet(id){try{const t=localStorage.getItem('ab-tk'),i=await fetchTx(id,t);document.getElementById('dRaw').textContent=i.rawText||'无';document.getElementById('dJson').textContent=fmJson(i.structuredJson);const bd=document.getElementById('detBg');bd.classList.remove('hidden');bd.classList.add('flex');}catch(e){showDN(e.message);}}
+    function closeDet(){const bd=document.getElementById('detBg');bd.classList.add('hidden');bd.classList.remove('flex');}
+    async function saveTx(){if(!editId)return;const t=localStorage.getItem('ab-tk');try{await fetch(`/api/transactions/${editId}`,{method:'PATCH',headers:{'Content-Type':'application/json',...(t?{'X-API-Token':t}:{})},body:JSON.stringify({transactionDate:e2n(document.getElementById('eDate').value),amount:e2n(document.getElementById('eAmt').value),merchant:e2n(document.getElementById('eMerch').value),type:e2n(document.getElementById('eType').value),category:e2n(document.getElementById('eCat').value),status:e2n(document.getElementById('eStat').value)})});closeEd();hideDN();loadDash();}catch(e){showDN('保存失败');}}
+    async function delTx(id){if(!confirm('确认删除？'))return;const t=localStorage.getItem('ab-tk');await fetch(`/api/transactions/${id}`,{method:'DELETE',headers:t?{'X-API-Token':t}:{}});loadDash();}
+    async function fetchTx(id,t){const r=await fetch(`/api/transactions/${id}`,{headers:t?{'X-API-Token':t}:{}});if(!r.ok)throw new Error('失败');return r.json();}
 
-    async function locateTransactionById() {
-        const id = document.getElementById('globalTransactionId').value.trim();
-        const token = localStorage.getItem('autobookkeeper-token');
-        if (!id) {
-            showNotice('请输入快捷指令返回的交易 ID。');
-            return;
-        }
-        try {
-            const item = await fetchTransaction(id, token);
-            if (item.transactionDate) {
-                document.getElementById('monthFilter').value = item.transactionDate.slice(0, 7);
-            }
-            document.getElementById('transactionIdSearch').value = id;
-            highlightedTransactionId = String(id);
-            await loadDashboard();
-            document.getElementById('transactions').scrollIntoView({ behavior: 'smooth', block: 'start' });
-            showNotice(`已定位到账目 ID ${id}，日期 ${item.transactionDate || '未知'}。`);
-        } catch (error) {
-            showNotice('没有找到这笔账目，请确认 ID 属于当前登录账号。');
-        }
-    }
+    async function loadAcct(){const t=localStorage.getItem('ab-tk'),u=localStorage.getItem('ab-un');if(!t)return;document.getElementById('pUser').textContent=u||'-';document.getElementById('pTkn').textContent=t||'-';try{const r=await fetch('/api/transactions?page=0&size=1',{headers:{'X-API-Token':t}});if(r.ok){const d=await r.json();if(d.content?.[0]?.createdAt)document.getElementById('pDate').textContent=new Date(d.content[0].createdAt).toLocaleDateString('zh-CN');}}catch(e){}document.getElementById('pKey').textContent='(已认证)';}
+    async function chgPw(){const cp=document.getElementById('curPw').value,np=document.getElementById('newPw').value,cf=document.getElementById('cfmPw').value,n=document.getElementById('pwN'),s=document.getElementById('pwS');n.classList.add('hidden');s.classList.add('hidden');if(!cp||!np){n.textContent='请填写密码';n.classList.remove('hidden');return;}if(np.length<6){n.textContent='至少6位';n.classList.remove('hidden');return;}if(np!==cf){n.textContent='两次不一致';n.classList.remove('hidden');return;}const t=localStorage.getItem('ab-tk');try{const r=await fetch('/api/auth/change-password',{method:'POST',headers:{'Content-Type':'application/json','X-API-Token':t},body:JSON.stringify({currentPassword:cp,newPassword:np})});if(r.status===401){n.textContent='当前密码错误';n.classList.remove('hidden');return;}if(!r.ok){n.textContent='修改失败';n.classList.remove('hidden');return;}s.textContent='修改成功 ✓';s.classList.remove('hidden');document.getElementById('curPw').value='';document.getElementById('newPw').value='';document.getElementById('cfmPw').value='';}catch(e){n.textContent='网络错误';n.classList.remove('hidden');}}
 
-    function updateAccountStatus() {
-        const username = localStorage.getItem('autobookkeeper-username');
-        const token = localStorage.getItem('autobookkeeper-token');
-        const status = username && token ? `已登录：${username}` : '未登录';
-        document.getElementById('accountStatus').textContent = status;
-        document.getElementById('dashboardAccountStatus').textContent = status;
-    }
-
-    async function migrateLegacyData() {
-        const token = localStorage.getItem('autobookkeeper-token');
-        const legacyToken = document.getElementById('legacyToken').value;
-        if (!token || !localStorage.getItem('autobookkeeper-username')) {
-            showNotice('请先用新账号登录，再迁移旧数据。');
-            return;
-        }
-        try {
-            const response = await fetch('/api/auth/migrate-legacy', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-API-Token': token },
-                body: JSON.stringify({ legacyToken })
-            });
-            if (!response.ok) throw new Error(response.status === 403 ? '旧 token 不正确，无法迁移。' : '迁移失败。');
-            const data = await response.json();
-            showNotice(`迁移完成：${data.migratedCount} 条旧账目已绑定到当前账号。如果当前月份仍为空，请切换到旧账单所在月份。`);
-            loadDashboard();
-        } catch (error) {
-            showNotice(error.message);
-        }
-    }
-
-    function refreshVisibility() {
-        const token = localStorage.getItem('autobookkeeper-token');
-        const username = localStorage.getItem('autobookkeeper-username');
-        const authenticated = Boolean(token && username);
-        document.getElementById('authCard').style.display = authenticated ? 'none' : '';
-        document.querySelectorAll('.dashboard').forEach(element => {
-            element.style.display = authenticated ? 'block' : 'none';
-        });
-        if (authenticated) {
-            loadDashboard();
-        }
-    }
-
-    function loadDashboard() {
-        loadSummary();
-        loadTransactions();
-    }
-
-    function currentMonth() {
-        const now = new Date();
-        return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
-    }
-
-    function selectedMonth() {
-        return document.getElementById('monthFilter').value || currentMonth();
-    }
-
-    async function loadSummary() {
-        const headers = {};
-        const token = localStorage.getItem('autobookkeeper-token');
-        if (token) headers['X-API-Token'] = token;
-        const container = document.getElementById('summary');
-        document.getElementById('activeMonthLabel').textContent = `当前月份：${selectedMonth()}`;
-        try {
-            const response = await fetch(`/api/transactions/summary?month=${selectedMonth()}`, { headers });
-            if (response.status === 401) {
-                resetInvalidSession();
-                throw new Error('登录已失效，请重新登录。');
-            }
-            if (!response.ok) throw new Error('加载汇总失败。');
-            const data = await response.json();
-            const expenseChips = (data.expenseCategorySummaries || []).map(item => `<span class="summary-chip">支出 · ${escapeHtml(item.category)} ¥${item.amount}</span>`).join('');
-            const incomeChips = (data.incomeCategorySummaries || []).map(item => `<span class="summary-chip">收入 · ${escapeHtml(item.category)} ¥${item.amount}</span>`).join('');
-            const categoryChips = `${incomeChips}${expenseChips}`;
-            container.innerHTML = `
-                <div class="meta">统计周期：${data.month}</div>
-                <div class="summary-grid">
-                    <div class="summary-box"><div class="summary-label">收入</div><div class="summary-value income">+¥${data.incomeTotal || 0}</div></div>
-                    <div class="summary-box"><div class="summary-label">支出</div><div class="summary-value expense">-¥${data.expenseTotal || 0}</div></div>
-                    <div class="summary-box"><div class="summary-label">结余</div><div class="summary-value balance">¥${data.balance || 0}</div></div>
-                </div>
-                <div class="summary-categories">${categoryChips || '<span class="meta">暂无分类账目</span>'}</div>
-            `;
-        } catch (error) {
-            container.innerHTML = '<p class="meta">汇总加载失败。</p>';
-            showNotice(error.message);
-        }
-    }
-
-    async function loadTransactions() {
-        const headers = {};
-        const token = localStorage.getItem('autobookkeeper-token');
-        if (token) headers['X-API-Token'] = token;
-        const container = document.getElementById('transactions');
-        hideNotice();
-        try {
-            const response = await fetch(`/api/transactions?month=${selectedMonth()}&page=0&size=100`, { headers });
-            if (response.status === 401) {
-                resetInvalidSession();
-                throw new Error('登录已失效，请重新登录。');
-            }
-            if (!response.ok) throw new Error('加载账目失败。');
-            const data = await response.json();
-            latestTransactions = data.content || [];
-            renderTransactions();
-        } catch (error) {
-            container.innerHTML = '<p class="meta">加载失败，请检查后端服务和网络。</p>';
-            showNotice(error.message);
-        }
-    }
-
-    function renderTransactions() {
-        const container = document.getElementById('transactions');
-        const reviewOnly = document.getElementById('reviewOnly').checked;
-        const merchantQuery = document.getElementById('merchantSearch').value.trim().toLowerCase();
-        const transactionIdQuery = document.getElementById('transactionIdSearch').value.trim();
-        const type = document.getElementById('typeFilter').value;
-        const category = document.getElementById('categoryFilter').value;
-        const rows = latestTransactions.filter(item => {
-            if (reviewOnly && item.status !== 'NEEDS_REVIEW') return false;
-            if (type && item.type !== type) return false;
-            if (category && item.category !== category) return false;
-            if (transactionIdQuery && String(item.id) !== transactionIdQuery) return false;
-            if (merchantQuery && !String(item.merchant || '').toLowerCase().includes(merchantQuery)) return false;
-            return true;
-        });
-        if (rows.length === 0) {
-            container.innerHTML = reviewOnly ? '<div class="empty-state"><p class="meta">暂无需复核账目。</p></div>' : `
-                <div class="empty-state">
-                    <p class="meta">当前月份暂无账目。</p>
-                    <p class="meta">如果快捷指令返回了交易 ID，请用上方“快速定位账目”自动跳到对应月份；如果你之前已有旧账单，请先迁移旧数据。</p>
-                </div>
-            `;
-            return;
-        }
-        container.innerHTML = `<div class="transaction-list">${rows.map(item => {
-            const type = item.type || '支出';
-            const isIncome = type === '收入';
-            const amountClass = isIncome ? 'income' : 'expense';
-            const amountPrefix = isIncome ? '+' : '-';
-            return `
-                <div class="row ${String(item.id) === highlightedTransactionId ? 'highlight-row' : ''}">
-                    <div>
-                        <div class="merchant">${escapeHtml(item.merchant)}</div>
-                        <div class="transaction-meta">
-                            <span class="meta-item">ID ${item.id}</span>
-                            <span class="meta-item">${item.transactionDate || '日期未知'}</span>
-                            <span class="meta-item">${type}</span>
-                            <span class="meta-item">${escapeHtml(item.category)}</span>
-                            <span class="status ${statusClass(item.status)}">${statusLabel(item.status)}</span>
-                        </div>
-                    </div>
-                    <div class="actions">
-                        <div class="amount ${amountClass}">${amountPrefix}¥${item.amount}</div>
-                        <div class="row-actions">
-                            <select class="quick-category" onchange="quickUpdateCategory(${item.id}, this.value)">
-                                ${categoryOptions(type, item.category)}
-                            </select>
-                            <button class="muted" onclick="editTransaction(${item.id})">编辑</button>
-                            <button class="muted" onclick="showDetails(${item.id})">详情</button>
-                            ${item.status === 'NEEDS_REVIEW' ? `<button class="secondary" onclick="markProcessed(${item.id})">标记已处理</button>` : ''}
-                            <button class="danger" onclick="deleteTransaction(${item.id})">删除</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }).join('')}</div>`;
-    }
-
-    async function markProcessed(id) {
-        try {
-            const token = localStorage.getItem('autobookkeeper-token');
-            const item = await fetchTransaction(id, token);
-            const response = await fetch(`/api/transactions/${id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? {'X-API-Token': token} : {})
-                },
-                body: JSON.stringify({
-                    transactionDate: item.transactionDate,
-                    amount: item.amount,
-                    merchant: item.merchant,
-                    type: item.type || '支出',
-                    category: item.category,
-                    status: 'PROCESSED'
-                })
-            });
-            if (!response.ok) {
-                showNotice(response.status === 401 ? 'Token 无效或未填写。' : '标记失败，请稍后重试。');
-                return;
-            }
-            loadDashboard();
-        } catch (error) {
-            showNotice(error.message);
-        }
-    }
-
-    async function quickUpdateCategory(id, category) {
-        try {
-            const token = localStorage.getItem('autobookkeeper-token');
-            const item = await fetchTransaction(id, token);
-            const response = await fetch(`/api/transactions/${id}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? {'X-API-Token': token} : {})
-                },
-                body: JSON.stringify({
-                    transactionDate: item.transactionDate,
-                    amount: item.amount,
-                    merchant: item.merchant,
-                    type: item.type || '支出',
-                    category,
-                    status: item.status
-                })
-            });
-            if (!response.ok) {
-                showNotice(response.status === 401 ? 'Token 无效或未填写。' : '分类保存失败，请稍后重试。');
-                return;
-            }
-            hideNotice();
-            loadDashboard();
-        } catch (error) {
-            showNotice(error.message);
-        }
-    }
-
-    async function editTransaction(id) {
-        try {
-            const token = localStorage.getItem('autobookkeeper-token');
-            const item = await fetchTransaction(id, token);
-            editingTransactionId = id;
-            document.getElementById('editDate').value = item.transactionDate || '';
-            document.getElementById('editAmount').value = item.amount || '';
-            document.getElementById('editMerchant').value = item.merchant || '';
-            document.getElementById('editType').value = item.type || '支出';
-            updateEditCategoryOptions(item.category || '其他');
-            document.getElementById('editStatus').value = item.status || 'NEEDS_REVIEW';
-            document.getElementById('editorBackdrop').style.display = 'flex';
-        } catch (error) {
-            showNotice(error.message);
-        }
-    }
-
-    function closeEditor() {
-        editingTransactionId = null;
-        document.getElementById('editorBackdrop').style.display = 'none';
-    }
-
-    async function showDetails(id) {
-        try {
-            const token = localStorage.getItem('autobookkeeper-token');
-            const item = await fetchTransaction(id, token);
-            document.getElementById('detailRawText').textContent = item.rawText || '无';
-            document.getElementById('detailStructuredJson').textContent = formatJson(item.structuredJson);
-            document.getElementById('detailBackdrop').style.display = 'flex';
-        } catch (error) {
-            showNotice(error.message);
-        }
-    }
-
-    function closeDetails() {
-        document.getElementById('detailBackdrop').style.display = 'none';
-    }
-
-    async function saveTransaction() {
-        if (!editingTransactionId) return;
-        const token = localStorage.getItem('autobookkeeper-token');
-        try {
-            const response = await fetch(`/api/transactions/${editingTransactionId}`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    ...(token ? {'X-API-Token': token} : {})
-                },
-                body: JSON.stringify({
-                    transactionDate: emptyToNull(document.getElementById('editDate').value),
-                    amount: emptyToNull(document.getElementById('editAmount').value),
-                    merchant: emptyToNull(document.getElementById('editMerchant').value),
-                    type: emptyToNull(document.getElementById('editType').value),
-                    category: emptyToNull(document.getElementById('editCategory').value),
-                    status: emptyToNull(document.getElementById('editStatus').value)
-                })
-            });
-            if (!response.ok) {
-                showNotice(response.status === 401 ? 'Token 无效或未填写。' : '保存失败，请检查输入后重试。');
-                return;
-            }
-            closeEditor();
-            hideNotice();
-            loadDashboard();
-        } catch (error) {
-            showNotice(error.message);
-        }
-    }
-
-    async function deleteTransaction(id) {
-        if (!confirm('确认删除这条账目吗？')) return;
-        const token = localStorage.getItem('autobookkeeper-token');
-        const response = await fetch(`/api/transactions/${id}`, {
-            method: 'DELETE',
-            headers: token ? {'X-API-Token': token} : {}
-        });
-        if (!response.ok) {
-            showNotice(response.status === 401 ? 'Token 无效或未填写。' : '删除失败，请稍后重试。');
-            return;
-        }
-        loadDashboard();
-    }
-
-    async function fetchTransaction(id, token) {
-        const response = await fetch(`/api/transactions/${id}`, {
-            headers: token ? {'X-API-Token': token} : {}
-        });
-        if (!response.ok) throw new Error('读取账目失败。');
-        return response.json();
-    }
-
-    function statusLabel(status) {
-        return status === 'NEEDS_REVIEW' ? '需复核' : status === 'PROCESSED' ? '已处理' : status;
-    }
-
-    function statusClass(status) {
-        return status === 'NEEDS_REVIEW' ? 'review' : status === 'PROCESSED' ? 'processed' : '';
-    }
-
-    function showNotice(message) {
-        ['notice', 'dashboardNotice'].forEach(id => {
-            const notice = document.getElementById(id);
-            notice.textContent = message;
-            notice.style.display = 'block';
-        });
-    }
-
-    function hideNotice() {
-        ['notice', 'dashboardNotice'].forEach(id => {
-            const notice = document.getElementById(id);
-            notice.textContent = '';
-            notice.style.display = 'none';
-        });
-    }
-
-    function escapeHtml(value) {
-        return String(value || '').replace(/[&<>'"]/g, char => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[char]));
-    }
-
-    function emptyToNull(value) {
-        return value === '' ? null : value;
-    }
-
-    function formatJson(value) {
-        if (!value) return '无';
-        try {
-            return JSON.stringify(JSON.parse(value), null, 2);
-        } catch (error) {
-            return value;
-        }
-    }
-
-    function allCategories() {
-        return [...categoriesByType['支出'], ...categoriesByType['收入']];
-    }
-
-    function categoryOptions(type, selected) {
-        return (categoriesByType[type] || allCategories())
-                .map(category => `<option value="${category}" ${category === selected ? 'selected' : ''}>${category}</option>`)
-                .join('');
-    }
-
-    function updateCategoryFilterOptions() {
-        const type = document.getElementById('typeFilter').value;
-        const selected = document.getElementById('categoryFilter').value;
-        document.getElementById('categoryFilter').innerHTML = `<option value="">全部分类</option>${categoryOptions(type, selected)}`;
-    }
-
-    function updateEditCategoryOptions(selected) {
-        const type = document.getElementById('editType').value || '支出';
-        const current = selected || document.getElementById('editCategory').value;
-        document.getElementById('editCategory').innerHTML = categoryOptions(type, current);
-    }
-
-    updateCategoryFilterOptions();
-    updateEditCategoryOptions();
-    refreshVisibility();
+    function esc(v){return String(v||'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));}
+    function e2n(v){return v===''?null:v;}
+    function fmJson(v){if(!v)return '无';try{return JSON.stringify(JSON.parse(v),null,2);}catch(e){return v;}}
+    function catO(tp,sel){return(CAT[tp]||[...CAT['支出'],...CAT['收入']]).map(c=>`<option value="${c}" ${c===sel?'selected':''}>${c}</option>`).join('');}
+    function updCatF(){const tp=document.getElementById('typeF').value,sel=document.getElementById('catF').value;document.getElementById('catF').innerHTML=`<option value="">全部</option>${catO(tp,sel)}`;}
+    function updECat(sel){const tp=document.getElementById('eType').value||'支出',cur=sel||document.getElementById('eCat').value;document.getElementById('eCat').innerHTML=catO(tp,cur);}
+    updCatF();updECat();refresh();
 </script>
 </body>
 </html>

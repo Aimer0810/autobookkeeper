@@ -2,6 +2,7 @@ package com.autobookkeeper.api;
 
 import com.autobookkeeper.api.dto.AuthRequest;
 import com.autobookkeeper.api.dto.AuthResponse;
+import com.autobookkeeper.api.dto.ChangePasswordRequest;
 import com.autobookkeeper.api.dto.LegacyMigrationRequest;
 import com.autobookkeeper.api.dto.LegacyMigrationResponse;
 import com.autobookkeeper.api.dto.RegisterRequest;
@@ -13,6 +14,8 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/auth")
@@ -40,5 +43,11 @@ public class AuthController {
     public LegacyMigrationResponse migrateLegacy(@Valid @RequestBody LegacyMigrationRequest request, HttpServletRequest httpRequest) {
         int migratedCount = authService.migrateLegacyTransactions(httpRequest.getHeader("X-API-Token"), request.legacyToken());
         return new LegacyMigrationResponse(migratedCount);
+    }
+
+    @PostMapping("/change-password")
+    public Map<String, String> changePassword(@Valid @RequestBody ChangePasswordRequest request, HttpServletRequest httpRequest) {
+        authService.changePassword(httpRequest.getHeader("X-API-Token"), request.currentPassword(), request.newPassword());
+        return Map.of("status", "ok");
     }
 }

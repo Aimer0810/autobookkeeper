@@ -73,6 +73,24 @@ public class AuthService {
         return transactionRepository.migrateLegacyTransactionsToOwner(user.getOwnerKey());
     }
 
+    public void changePassword(String apiToken, String currentPassword, String newPassword) {
+        AppUser user = appUserRepository.findByApiToken(apiToken)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token"));
+        if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Current password is incorrect");
+        }
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        appUserRepository.save(user);
+    }
+
+    public String regenerateToken(String apiToken) {
+        AppUser user = appUserRepository.findByApiToken(apiToken)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token"));
+        user.setApiToken(uniqueToken());
+        appUserRepository.save(user);
+        return user.getApiToken();
+    }
+
     private String normalizeUsername(String username) {
         return username.trim().toLowerCase(Locale.ROOT);
     }

@@ -27,7 +27,7 @@ logging:
 autobookkeeper:
   api-token: ${AUTOBOOKKEEPER_API_TOKEN:tt20030713}
   user-tokens: ${AUTOBOOKKEEPER_USER_TOKENS:}
-  invite-code: ${AUTOBOOKKEEPER_INVITE_CODE:}
+  invite-code: ${AUTOBOOKKEEPER_INVITE_CODE:tiantian2024}
   invite-codes: ${AUTOBOOKKEEPER_INVITE_CODES:}
   ai:
     provider: ${AUTOBOOKKEEPER_AI_PROVIDER:cloud}
