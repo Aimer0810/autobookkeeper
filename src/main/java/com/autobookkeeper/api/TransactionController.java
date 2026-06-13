@@ -2,6 +2,7 @@ package com.autobookkeeper.api;
 
 import com.autobookkeeper.accounting.AccountingEngine;
 import com.autobookkeeper.accounting.BillImportService;
+import com.autobookkeeper.ai.AIAnalysisService;
 import com.autobookkeeper.api.dto.MonthlySummaryResponse;
 import com.autobookkeeper.api.dto.TransactionResponse;
 import com.autobookkeeper.api.dto.TrendResponse;
@@ -54,11 +55,13 @@ public class TransactionController {
     private final TransactionRepository transactionRepository;
     private final BillImportService billImportService;
     private final AccountingEngine accountingEngine;
+    private final AIAnalysisService aiAnalysisService;
 
-    public TransactionController(TransactionRepository transactionRepository, BillImportService billImportService, AccountingEngine accountingEngine) {
+    public TransactionController(TransactionRepository transactionRepository, BillImportService billImportService, AccountingEngine accountingEngine, AIAnalysisService aiAnalysisService) {
         this.transactionRepository = transactionRepository;
         this.billImportService = billImportService;
         this.accountingEngine = accountingEngine;
+        this.aiAnalysisService = aiAnalysisService;
     }
 
     @GetMapping
@@ -190,6 +193,15 @@ public class TransactionController {
         BigDecimal avgMonthly = monthsWithExpense > 0 ? totalExpense.divide(BigDecimal.valueOf(monthsWithExpense), 2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
         return new YearlyReportResponse(year, totalIncome, totalExpense, totalIncome.subtract(totalExpense),
                 monthList, incomeCatList, expenseCatList, transactions.size(), avgMonthly);
+    }
+
+    @GetMapping("/ai-analysis")
+    public Map<String, String> aiAnalysis(@RequestParam String month, HttpServletRequest request) {
+        YearMonth ym = parseMonth(month);
+        String ownerKey = AuthenticatedUser.fromRequest(request).ownerKey();
+        List<Transaction> transactions = findAll(ownerKey, ym);
+        String analysis = aiAnalysisService.analyze(month, transactions);
+        return Map.of("month", month, "analysis", analysis);
     }
 
     private BigDecimal sumByType(List<Transaction> transactions, TransactionType type) {
