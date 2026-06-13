@@ -153,7 +153,7 @@
                 <div id="dashNotice" class="hidden text-sm text-coral-700 bg-coral-50 border border-coral-200 rounded-2xl px-4 py-3"></div>
 
                 <!-- Quick -->
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     <div class="bg-white rounded-3xl border border-clay-100 p-5 shadow-sm">
                         <div class="flex items-center gap-2.5 mb-2"><div class="w-8 h-8 rounded-xl bg-sage-50 grid place-items-center"><i data-lucide="search" class="w-4 h-4 text-sage-600" stroke-width="1.5"></i></div><h3 class="text-sm font-bold text-clay-800">快速定位</h3></div>
                         <p class="text-xs text-clay-400 mb-3">输入交易 ID 跳到对应月份</p>
@@ -169,6 +169,16 @@
                             <input id="legacyTkn" type="password" placeholder="旧版 Token" class="flex-1 h-10 px-3.5 text-sm bg-clay-50 border border-clay-200 rounded-xl text-clay-800 placeholder-clay-300 outline-none focus:border-coral-400 focus:ring-2 focus:ring-coral-100 transition-all">
                             <button onclick="migrate()" class="h-10 px-5 text-xs font-bold bg-clay-800 text-white rounded-xl hover:bg-clay-900 transition-all cursor-pointer">迁移</button>
                         </div>
+                    </div>
+                    <div class="bg-white rounded-3xl border border-clay-100 p-5 shadow-sm">
+                        <div class="flex items-center gap-2.5 mb-2"><div class="w-8 h-8 rounded-xl bg-coral-50 grid place-items-center"><i data-lucide="upload" class="w-4 h-4 text-coral-500" stroke-width="1.5"></i></div><h3 class="text-sm font-bold text-clay-800">导入账单</h3></div>
+                        <p class="text-xs text-clay-400 mb-3">支付宝/微信 CSV 账单</p>
+                        <div id="importNotice" class="hidden text-xs text-coral-700 bg-coral-50 border border-coral-200 rounded-xl px-3 py-2 mb-2"></div>
+                        <div id="importResult" class="hidden text-xs text-sage-700 bg-sage-50 border border-sage-200 rounded-xl px-3 py-2 mb-2"></div>
+                        <label class="flex items-center justify-center gap-2 h-10 text-xs font-bold bg-coral-500 text-white rounded-xl hover:bg-coral-600 transition-all shadow-sm shadow-coral-500/20 cursor-pointer">
+                            <i data-lucide="file-up" class="w-4 h-4" stroke-width="1.5"></i> 选择 CSV
+                            <input id="importFile" type="file" accept=".csv,.CSV" class="hidden" onchange="importBills(this)">
+                        </label>
                     </div>
                 </div>
 
@@ -314,6 +324,21 @@
 
     async function locateTx(){const id=document.getElementById('locId').value.trim(),t=localStorage.getItem('ab-tk');if(!id){showDN('请输入交易 ID');return;}try{const i=await fetchTx(id,t);if(i.transactionDate)document.getElementById('monthF').value=i.transactionDate.slice(0,7);document.getElementById('idF').value=id;hlId=String(id);await loadDash();document.getElementById('txList').scrollIntoView({behavior:'smooth',block:'start'});showDN(`已定位 ID ${id}`);}catch(e){showDN('未找到');}}
     async function migrate(){const t=localStorage.getItem('ab-tk'),lt=document.getElementById('legacyTkn').value;if(!t){showDN('请先登录');return;}try{const r=await fetch('/api/auth/migrate-legacy',{method:'POST',headers:{'Content-Type':'application/json','X-API-Token':t},body:JSON.stringify({legacyToken:lt})});if(!r.ok)throw new Error(r.status===403?'旧 Token 不正确':'迁移失败');const d=await r.json();showDN(`迁移完成：${d.migratedCount} 条`);loadDash();}catch(e){showDN(e.message);}}
+
+    async function importBills(input){
+        const file=input.files[0];if(!file)return;
+        const n=document.getElementById('importNotice'),r=document.getElementById('importResult');
+        n.classList.add('hidden');r.classList.add('hidden');
+        const t=localStorage.getItem('ab-tk');if(!t){n.textContent='请先登录';n.classList.remove('hidden');return;}
+        const fd=new FormData();fd.append('file',file);
+        try{
+            const resp=await fetch('/api/transactions/import',{method:'POST',headers:{'X-API-Token':t},body:fd});
+            const d=await resp.json();
+            if(d.status==='error'){n.textContent=d.message;n.classList.remove('hidden');}
+            else{r.textContent=`导入成功：${d.imported} 条（共 ${d.total} 条）`;r.classList.remove('hidden');loadDash();}
+        }catch(e){n.textContent='导入失败：'+e.message;n.classList.remove('hidden');}
+        input.value='';
+    }
     function loadDash(){loadSum();loadTx();loadCharts();}
     function curM(){const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;}
     function selM(){return document.getElementById('monthF').value||curM();}

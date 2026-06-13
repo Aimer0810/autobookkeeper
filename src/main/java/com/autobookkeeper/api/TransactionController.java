@@ -1,9 +1,12 @@
 package com.autobookkeeper.api;
 
+import com.autobookkeeper.accounting.AccountingEngine;
+import com.autobookkeeper.accounting.BillImportService;
 import com.autobookkeeper.api.dto.MonthlySummaryResponse;
 import com.autobookkeeper.api.dto.TransactionResponse;
 import com.autobookkeeper.api.dto.TrendResponse;
 import com.autobookkeeper.api.dto.UpdateTransactionRequest;
+import com.autobookkeeper.domain.Bill;
 import com.autobookkeeper.domain.Transaction;
 import com.autobookkeeper.domain.TransactionType;
 import com.autobookkeeper.repository.TransactionRepository;
@@ -17,13 +20,16 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
@@ -42,9 +48,13 @@ import static org.springframework.http.HttpStatus.NOT_FOUND;
 public class TransactionController {
 
     private final TransactionRepository transactionRepository;
+    private final BillImportService billImportService;
+    private final AccountingEngine accountingEngine;
 
-    public TransactionController(TransactionRepository transactionRepository) {
+    public TransactionController(TransactionRepository transactionRepository, BillImportService billImportService, AccountingEngine accountingEngine) {
         this.transactionRepository = transactionRepository;
+        this.billImportService = billImportService;
+        this.accountingEngine = accountingEngine;
     }
 
     @GetMapping
@@ -138,6 +148,26 @@ public class TransactionController {
             return YearMonth.parse(month);
         } catch (DateTimeParseException exception) {
             throw new ResponseStatusException(BAD_REQUEST, "month must use yyyy-MM format");
+        }
+    }
+
+    @PostMapping("/import")
+    public Map<String, Object> importBills(@RequestParam("file") MultipartFile file, HttpServletRequest request) {
+        String ownerKey = AuthenticatedUser.fromRequest(request).ownerKey();
+        try {
+            List<Bill> bills = billImportService.parse(file.getBytes(), file.getOriginalFilename());
+            int imported = 0;
+            for (Bill bill : bills) {
+                Transaction tx = accountingEngine.createTransaction(bill, "csv-import");
+                tx.assignOwner(ownerKey);
+                transactionRepository.save(tx);
+                imported++;
+            }
+            return Map.of("status", "ok", "imported", imported, "total", bills.size());
+        } catch (IllegalArgumentException e) {
+            return Map.of("status", "error", "message", e.getMessage());
+        } catch (Exception e) {
+            return Map.of("status", "error", "message", "文件解析失败: " + e.getMessage());
         }
     }
 
