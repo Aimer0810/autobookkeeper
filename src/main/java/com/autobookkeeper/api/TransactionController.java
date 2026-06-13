@@ -2,6 +2,7 @@ package com.autobookkeeper.api;
 
 import com.autobookkeeper.api.dto.MonthlySummaryResponse;
 import com.autobookkeeper.api.dto.TransactionResponse;
+import com.autobookkeeper.api.dto.TrendResponse;
 import com.autobookkeeper.api.dto.UpdateTransactionRequest;
 import com.autobookkeeper.domain.Transaction;
 import com.autobookkeeper.domain.TransactionType;
@@ -23,8 +24,10 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.YearMonth;
 import java.time.format.DateTimeParseException;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -79,6 +82,42 @@ public class TransactionController {
                 toCategorySummaries(incomeByCategory),
                 toCategorySummaries(expenseByCategory)
         );
+    }
+
+    @GetMapping("/trend")
+    public TrendResponse trend(@RequestParam(defaultValue = "6") int months, HttpServletRequest request) {
+        String ownerKey = AuthenticatedUser.fromRequest(request).ownerKey();
+        YearMonth end = YearMonth.now();
+        YearMonth start = end.minusMonths(months - 1);
+        LocalDate startDate = start.atDay(1);
+        LocalDate endDate = end.plusMonths(1).atDay(1);
+        List<Transaction> transactions;
+        if (UserTokenResolver.DEFAULT_OWNER_KEY.equals(ownerKey)) {
+            transactions = transactionRepository.findAllVisibleToDefaultOwnerBetween(startDate, endDate);
+        } else {
+            transactions = transactionRepository.findAllByOwnerKeyAndTransactionDateGreaterThanEqualAndTransactionDateLessThan(ownerKey, startDate, endDate);
+        }
+        Map<String, BigDecimal[]> monthlyData = new LinkedHashMap<>();
+        for (int i = 0; i < months; i++) {
+            String key = start.plusMonths(i).toString();
+            monthlyData.put(key, new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+        }
+        for (Transaction tx : transactions) {
+            String key = YearMonth.from(tx.getTransactionDate()).toString();
+            BigDecimal[] totals = monthlyData.get(key);
+            if (totals != null) {
+                if (tx.getType() == TransactionType.INCOME) {
+                    totals[0] = totals[0].add(tx.getAmount());
+                } else {
+                    totals[1] = totals[1].add(tx.getAmount());
+                }
+            }
+        }
+        List<TrendResponse.MonthData> result = new ArrayList<>();
+        for (Map.Entry<String, BigDecimal[]> entry : monthlyData.entrySet()) {
+            result.add(new TrendResponse.MonthData(entry.getKey(), entry.getValue()[0], entry.getValue()[1]));
+        }
+        return new TrendResponse(result);
     }
 
     private BigDecimal sumByType(List<Transaction> transactions, TransactionType type) {

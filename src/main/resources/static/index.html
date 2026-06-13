@@ -6,6 +6,7 @@
     <title>AutoBookkeeper</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script>
@@ -171,6 +172,18 @@
                     </div>
                 </div>
 
+                <!-- Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-5 gap-4">
+                    <div class="lg:col-span-3 bg-white rounded-3xl border border-clay-100 p-6 shadow-sm">
+                        <h3 class="text-sm font-bold text-clay-800 mb-4">收支趋势</h3>
+                        <div class="relative" style="height:220px"><canvas id="trendChart"></canvas></div>
+                    </div>
+                    <div class="lg:col-span-2 bg-white rounded-3xl border border-clay-100 p-6 shadow-sm">
+                        <h3 class="text-sm font-bold text-clay-800 mb-4">支出分类</h3>
+                        <div class="relative flex items-center justify-center" style="height:220px"><canvas id="catChart"></canvas></div>
+                    </div>
+                </div>
+
                 <!-- Summary -->
                 <div class="bg-white rounded-3xl border border-clay-100 p-6 shadow-sm">
                     <div class="flex items-center justify-between mb-5">
@@ -291,9 +304,56 @@
 
     async function locateTx(){const id=document.getElementById('locId').value.trim(),t=localStorage.getItem('ab-tk');if(!id){showDN('请输入交易 ID');return;}try{const i=await fetchTx(id,t);if(i.transactionDate)document.getElementById('monthF').value=i.transactionDate.slice(0,7);document.getElementById('idF').value=id;hlId=String(id);await loadDash();document.getElementById('txList').scrollIntoView({behavior:'smooth',block:'start'});showDN(`已定位 ID ${id}`);}catch(e){showDN('未找到');}}
     async function migrate(){const t=localStorage.getItem('ab-tk'),lt=document.getElementById('legacyTkn').value;if(!t){showDN('请先登录');return;}try{const r=await fetch('/api/auth/migrate-legacy',{method:'POST',headers:{'Content-Type':'application/json','X-API-Token':t},body:JSON.stringify({legacyToken:lt})});if(!r.ok)throw new Error(r.status===403?'旧 Token 不正确':'迁移失败');const d=await r.json();showDN(`迁移完成：${d.migratedCount} 条`);loadDash();}catch(e){showDN(e.message);}}
-    function loadDash(){loadSum();loadTx();}
+    function loadDash(){loadSum();loadTx();loadCharts();}
     function curM(){const n=new Date();return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`;}
     function selM(){return document.getElementById('monthF').value||curM();}
+
+    // Charts
+    let trendChartInstance = null;
+    let catChartInstance = null;
+    const chartColors = { income:'#5e805e', expense:'#f05540', incomeLight:'#5e805e33', expenseLight:'#f0554033',
+        cats:['#f05540','#d4a055','#5e805e','#6b7280','#8b5cf6','#ec4899','#14b8a6','#f59e0b','#3b82f6','#6366f1'] };
+
+    async function loadCharts(){
+        const t=localStorage.getItem('ab-tk'),h=t?{'X-API-Token':t}:{};
+        try{
+            const r=await fetch('/api/transactions/trend?months=6',{headers:h});
+            if(!r.ok)return;
+            const d=await r.json();
+            const labels=d.months.map(m=>m.month.slice(2));
+            const income=d.months.map(m=>parseFloat(m.income)||0);
+            const expense=d.months.map(m=>parseFloat(m.expense)||0);
+            if(trendChartInstance)trendChartInstance.destroy();
+            trendChartInstance=new Chart(document.getElementById('trendChart'),{
+                type:'line',
+                data:{labels,datasets:[
+                    {label:'收入',data:income,borderColor:chartColors.income,backgroundColor:chartColors.incomeLight,fill:true,tension:0.35,pointRadius:4,pointHoverRadius:6,borderWidth:2},
+                    {label:'支出',data:expense,borderColor:chartColors.expense,backgroundColor:chartColors.expenseLight,fill:true,tension:0.35,pointRadius:4,pointHoverRadius:6,borderWidth:2}
+                ]},
+                options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},
+                    plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',padding:16,font:{size:11,family:'Plus Jakarta Sans'}}},
+                        tooltip:{backgroundColor:'#4d443e',titleFont:{family:'Plus Jakarta Sans'},bodyFont:{family:'Plus Jakarta Sans'},padding:10,cornerRadius:12,callbacks:{label:ctx=>`${ctx.dataset.label}: ¥${ctx.parsed.y.toFixed(2)}`}}},
+                    scales:{x:{grid:{display:false},ticks:{font:{size:11,family:'Plus Jakarta Sans'},color:'#9a8c78'}}},
+                        y:{grid:{color:'#f0eeea'},ticks:{font:{size:11,family:'Plus Jakarta Sans'},color:'#9a8c78',callback:v=>'¥'+v}}}
+            });
+        }catch(e){}
+        // Category doughnut from current summary
+        try{
+            const r2=await fetch(`/api/transactions/summary?month=${selM()}`,{headers:h});
+            if(!r2.ok)return;
+            const d2=await r2.json();
+            const cats=(d2.expenseCategorySummaries||[]);
+            if(!cats.length)return;
+            if(catChartInstance)catChartInstance.destroy();
+            catChartInstance=new Chart(document.getElementById('catChart'),{
+                type:'doughnut',
+                data:{labels:cats.map(c=>c.category),datasets:[{data:cats.map(c=>parseFloat(c.amount)||0),backgroundColor:chartColors.cats.slice(0,cats.length),borderWidth:0,hoverOffset:6}]},
+                options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+                    plugins:{legend:{display:true,position:'bottom',labels:{usePointStyle:true,pointStyle:'circle',padding:10,font:{size:11,family:'Plus Jakarta Sans'},color:'#6d6054'}},
+                        tooltip:{backgroundColor:'#4d443e',titleFont:{family:'Plus Jakarta Sans'},bodyFont:{family:'Plus Jakarta Sans'},padding:10,cornerRadius:12,callbacks:{label:ctx=>`${ctx.label}: ¥${ctx.parsed.toFixed(2)}`}}}}
+            });
+        }catch(e){}
+    }
 
     async function loadSum(){const h={};const t=localStorage.getItem('ab-tk');if(t)h['X-API-Token']=t;const c=document.getElementById('summary');document.getElementById('monthLbl').textContent=selM();try{const r=await fetch(`/api/transactions/summary?month=${selM()}`,{headers:h});if(r.status===401){resetS();throw new Error('登录已失效');}if(!r.ok)throw new Error('加载失败');const d=await r.json();const ec=(d.expenseCategorySummaries||[]).map(i=>`<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-coral-50 text-coral-600 border border-coral-100">支出 · ${esc(i.category)} ¥${i.amount}</span>`).join('');const ic=(d.incomeCategorySummaries||[]).map(i=>`<span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-sage-50 text-sage-700 border border-sage-200">收入 · ${esc(i.category)} ¥${i.amount}</span>`).join('');c.innerHTML=`<div class="grid grid-cols-3 gap-3 mb-4"><div class="bg-sage-50 rounded-2xl border border-sage-100 p-4"><div class="text-[11px] font-bold text-clay-400 uppercase tracking-wider">收入</div><div class="text-2xl font-extrabold text-sage-600 mt-2 tracking-tight">+¥${d.incomeTotal||0}</div></div><div class="bg-coral-50 rounded-2xl border border-coral-100 p-4"><div class="text-[11px] font-bold text-clay-400 uppercase tracking-wider">支出</div><div class="text-2xl font-extrabold text-coral-500 mt-2 tracking-tight">-¥${d.expenseTotal||0}</div></div><div class="bg-sand-50 rounded-2xl border border-sand-200 p-4"><div class="text-[11px] font-bold text-clay-400 uppercase tracking-wider">结余</div><div class="text-2xl font-extrabold text-sand-600 mt-2 tracking-tight">¥${d.balance||0}</div></div></div><div class="flex flex-wrap gap-1.5">${ic}${ec||'<span class="text-xs text-clay-400">暂无</span>'}</div>`;}catch(e){c.innerHTML='<p class="text-sm text-clay-400 text-center py-6">加载失败</p>';showDN(e.message);}}
 
