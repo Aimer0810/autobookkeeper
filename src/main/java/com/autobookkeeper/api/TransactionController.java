@@ -7,6 +7,7 @@ import com.autobookkeeper.api.dto.TransactionResponse;
 import com.autobookkeeper.api.dto.TrendResponse;
 import com.autobookkeeper.api.dto.UpdateTransactionRequest;
 import com.autobookkeeper.domain.Bill;
+import com.autobookkeeper.domain.ProcessingStatus;
 import com.autobookkeeper.domain.Transaction;
 import com.autobookkeeper.domain.TransactionType;
 import com.autobookkeeper.repository.TransactionRepository;
@@ -15,6 +16,8 @@ import com.autobookkeeper.security.UserTokenResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -169,6 +172,48 @@ public class TransactionController {
         } catch (Exception e) {
             return Map.of("status", "error", "message", "文件解析失败: " + e.getMessage());
         }
+    }
+
+    @GetMapping("/export")
+    public ResponseEntity<byte[]> export(@RequestParam(required = false) String month, HttpServletRequest request) {
+        String ownerKey = AuthenticatedUser.fromRequest(request).ownerKey();
+        List<Transaction> transactions;
+        String label;
+        if (month != null && !month.isBlank()) {
+            YearMonth ym = parseMonth(month);
+            transactions = findAll(ownerKey, ym);
+            label = month;
+        } else {
+            YearMonth ym = YearMonth.now();
+            transactions = findAll(ownerKey, ym);
+            label = ym.toString();
+        }
+        StringBuilder csv = new StringBuilder();
+        csv.append("﻿"); // BOM for Excel Chinese support
+        csv.append("日期,类型,商户,分类,金额,状态,来源,创建时间\n");
+        for (Transaction tx : transactions) {
+            csv.append(tx.getTransactionDate()).append(',');
+            csv.append(tx.getType() == TransactionType.INCOME ? "收入" : "支出").append(',');
+            csv.append(escCsv(tx.getMerchant())).append(',');
+            csv.append(escCsv(tx.getCategory())).append(',');
+            csv.append(tx.getAmount()).append(',');
+            csv.append(tx.getStatus() == ProcessingStatus.PROCESSED ? "已处理" : tx.getStatus() == ProcessingStatus.NEEDS_REVIEW ? "需复核" : "失败").append(',');
+            csv.append(escCsv(tx.getSource())).append(',');
+            csv.append(tx.getCreatedAt()).append('\n');
+        }
+        byte[] bytes = csv.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.parseMediaType("text/csv;charset=UTF-8"));
+        headers.setContentDispositionFormData("attachment", "autobookkeeper-" + label + ".csv");
+        return ResponseEntity.ok().headers(headers).body(bytes);
+    }
+
+    private String escCsv(String value) {
+        if (value == null) return "";
+        if (value.contains(",") || value.contains("\"") || value.contains("\n")) {
+            return "\"" + value.replace("\"", "\"\"") + "\"";
+        }
+        return value;
     }
 
     @GetMapping("/{id}")
