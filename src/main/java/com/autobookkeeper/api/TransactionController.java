@@ -6,6 +6,7 @@ import com.autobookkeeper.api.dto.MonthlySummaryResponse;
 import com.autobookkeeper.api.dto.TransactionResponse;
 import com.autobookkeeper.api.dto.TrendResponse;
 import com.autobookkeeper.api.dto.UpdateTransactionRequest;
+import com.autobookkeeper.api.dto.YearlyReportResponse;
 import com.autobookkeeper.domain.Bill;
 import com.autobookkeeper.domain.ProcessingStatus;
 import com.autobookkeeper.domain.Transaction;
@@ -131,6 +132,64 @@ public class TransactionController {
             result.add(new TrendResponse.MonthData(entry.getKey(), entry.getValue()[0], entry.getValue()[1]));
         }
         return new TrendResponse(result);
+    }
+
+    @GetMapping("/yearly-report")
+    public YearlyReportResponse yearlyReport(@RequestParam(defaultValue = "2026") int year, HttpServletRequest request) {
+        String ownerKey = AuthenticatedUser.fromRequest(request).ownerKey();
+        LocalDate startDate = LocalDate.of(year, 1, 1);
+        LocalDate endDate = LocalDate.of(year + 1, 1, 1);
+        List<Transaction> transactions;
+        if (UserTokenResolver.DEFAULT_OWNER_KEY.equals(ownerKey)) {
+            transactions = transactionRepository.findAllVisibleToDefaultOwnerBetween(startDate, endDate);
+        } else {
+            transactions = transactionRepository.findAllByOwnerKeyAndTransactionDateGreaterThanEqualAndTransactionDateLessThan(ownerKey, startDate, endDate);
+        }
+        // Monthly aggregation
+        Map<String, BigDecimal[]> monthly = new LinkedHashMap<>();
+        for (int m = 1; m <= 12; m++) {
+            monthly.put(String.format("%d-%02d", year, m), new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+        }
+        // Category aggregation
+        Map<String, BigDecimal[]> incomeCat = new LinkedHashMap<>();
+        Map<String, BigDecimal[]> expenseCat = new LinkedHashMap<>();
+        BigDecimal totalIncome = BigDecimal.ZERO;
+        BigDecimal totalExpense = BigDecimal.ZERO;
+        for (Transaction tx : transactions) {
+            String key = YearMonth.from(tx.getTransactionDate()).toString();
+            BigDecimal[] m = monthly.get(key);
+            if (m != null) {
+                if (tx.getType() == TransactionType.INCOME) m[0] = m[0].add(tx.getAmount());
+                else m[1] = m[1].add(tx.getAmount());
+            }
+            if (tx.getType() == TransactionType.INCOME) {
+                totalIncome = totalIncome.add(tx.getAmount());
+                incomeCat.computeIfAbsent(tx.getCategory(), k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+                incomeCat.get(tx.getCategory())[0] = incomeCat.get(tx.getCategory())[0].add(tx.getAmount());
+                incomeCat.get(tx.getCategory())[1] = incomeCat.get(tx.getCategory())[1].add(BigDecimal.ONE);
+            } else {
+                totalExpense = totalExpense.add(tx.getAmount());
+                expenseCat.computeIfAbsent(tx.getCategory(), k -> new BigDecimal[]{BigDecimal.ZERO, BigDecimal.ZERO});
+                expenseCat.get(tx.getCategory())[0] = expenseCat.get(tx.getCategory())[0].add(tx.getAmount());
+                expenseCat.get(tx.getCategory())[1] = expenseCat.get(tx.getCategory())[1].add(BigDecimal.ONE);
+            }
+        }
+        List<YearlyReportResponse.MonthData> monthList = new ArrayList<>();
+        for (Map.Entry<String, BigDecimal[]> e : monthly.entrySet()) {
+            monthList.add(new YearlyReportResponse.MonthData(e.getKey(), e.getValue()[0], e.getValue()[1]));
+        }
+        List<YearlyReportResponse.CategoryData> incomeCatList = incomeCat.entrySet().stream()
+                .sorted((a, b) -> b.getValue()[0].compareTo(a.getValue()[0]))
+                .map(e -> new YearlyReportResponse.CategoryData(e.getKey(), e.getValue()[0], e.getValue()[1].intValue()))
+                .toList();
+        List<YearlyReportResponse.CategoryData> expenseCatList = expenseCat.entrySet().stream()
+                .sorted((a, b) -> b.getValue()[0].compareTo(a.getValue()[0]))
+                .map(e -> new YearlyReportResponse.CategoryData(e.getKey(), e.getValue()[0], e.getValue()[1].intValue()))
+                .toList();
+        long monthsWithExpense = monthly.values().stream().filter(v -> v[1].compareTo(BigDecimal.ZERO) > 0).count();
+        BigDecimal avgMonthly = monthsWithExpense > 0 ? totalExpense.divide(BigDecimal.valueOf(monthsWithExpense), 2, java.math.RoundingMode.HALF_UP) : BigDecimal.ZERO;
+        return new YearlyReportResponse(year, totalIncome, totalExpense, totalIncome.subtract(totalExpense),
+                monthList, incomeCatList, expenseCatList, transactions.size(), avgMonthly);
     }
 
     private BigDecimal sumByType(List<Transaction> transactions, TransactionType type) {

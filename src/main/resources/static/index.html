@@ -101,6 +101,9 @@
             <a onclick="go('dashboard')" data-nav="dashboard" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm cursor-pointer text-clay-500 hover:bg-clay-50 hover:text-clay-700 transition-all">
                 <i data-lucide="home" class="w-[18px] h-[18px]" stroke-width="1.5"></i> 首页
             </a>
+            <a onclick="go('report')" data-nav="report" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm cursor-pointer text-clay-500 hover:bg-clay-50 hover:text-clay-700 transition-all">
+                <i data-lucide="bar-chart-3" class="w-[18px] h-[18px]" stroke-width="1.5"></i> 年度报告
+            </a>
             <a onclick="go('account')" data-nav="account" class="nav-item flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm cursor-pointer text-clay-500 hover:bg-clay-50 hover:text-clay-700 transition-all">
                 <i data-lucide="user-cog" class="w-[18px] h-[18px]" stroke-width="1.5"></i> 账号设置
             </a>
@@ -223,6 +226,53 @@
                 </div>
             </div>
 
+            <!-- REPORT -->
+            <div id="page-report" class="page-content hidden space-y-6">
+                <div class="flex items-center justify-between">
+                    <div><h1 class="text-xl font-extrabold text-clay-900 tracking-tight">年度报告</h1><p class="text-sm text-clay-400 mt-0.5">全面了解你的财务状况</p></div>
+                    <div class="flex items-center gap-2">
+                        <select id="reportYear" onchange="loadReport()" class="h-9 px-3 text-sm bg-clay-50 border border-clay-200 rounded-xl text-clay-800 outline-none focus:border-coral-400 transition-all appearance-none cursor-pointer">
+                            <option value="2026">2026</option>
+                            <option value="2025">2025</option>
+                            <option value="2024">2024</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Summary Cards -->
+                <div class="grid grid-cols-2 sm:grid-cols-5 gap-3" id="reportSummary"></div>
+
+                <!-- Charts -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="bg-white rounded-3xl border border-clay-100 p-6 shadow-sm">
+                        <h3 class="text-sm font-bold text-clay-800 mb-4">月度收支</h3>
+                        <div class="relative" style="height:260px"><canvas id="yearlyBarChart"></canvas></div>
+                    </div>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="bg-white rounded-3xl border border-clay-100 p-6 shadow-sm">
+                            <h3 class="text-sm font-bold text-clay-800 mb-3">收入分类</h3>
+                            <div class="relative flex items-center justify-center" style="height:220px"><canvas id="yearlyIncomeCat"></canvas></div>
+                        </div>
+                        <div class="bg-white rounded-3xl border border-clay-100 p-6 shadow-sm">
+                            <h3 class="text-sm font-bold text-clay-800 mb-3">支出分类</h3>
+                            <div class="relative flex items-center justify-center" style="height:220px"><canvas id="yearlyExpenseCat"></canvas></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category Details -->
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <div class="bg-white rounded-3xl border border-clay-100 p-6 shadow-sm">
+                        <h3 class="text-sm font-bold text-sage-700 mb-4">收入明细</h3>
+                        <div id="incomeDetail" class="space-y-2"></div>
+                    </div>
+                    <div class="bg-white rounded-3xl border border-clay-100 p-6 shadow-sm">
+                        <h3 class="text-sm font-bold text-coral-600 mb-4">支出明细</h3>
+                        <div id="expenseDetail" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+
             <!-- ACCOUNT -->
             <div id="page-account" class="page-content hidden space-y-6">
                 <div><h1 class="text-xl font-extrabold text-clay-900 tracking-tight">账号设置</h1><p class="text-sm text-clay-400 mt-0.5">管理你的账号信息</p></div>
@@ -305,7 +355,7 @@
     const CAT={'支出':['餐饮','交通','购物','住房','医疗','娱乐','生活缴费','转账','其他','未分类'],'收入':['工资','奖金','报销','退款','转账收入','其他收入']};
     let editId=null,allTx=[],hlId=null,tknShown=false;
 
-    function go(p){document.querySelectorAll('.page-content').forEach(e=>e.classList.add('hidden'));document.getElementById('page-'+p).classList.remove('hidden');document.querySelectorAll('.nav-item').forEach(e=>{e.classList.remove('nav-on');e.classList.add('text-clay-500');});const a=document.querySelector(`[data-nav="${p}"]`);if(a){a.classList.add('nav-on');a.classList.remove('text-clay-500');}if(window.innerWidth<1024)toggleSB();if(p==='account')loadAcct();}
+    function go(p){document.querySelectorAll('.page-content').forEach(e=>e.classList.add('hidden'));document.getElementById('page-'+p).classList.remove('hidden');document.querySelectorAll('.nav-item').forEach(e=>{e.classList.remove('nav-on');e.classList.add('text-clay-500');});const a=document.querySelector(`[data-nav="${p}"]`);if(a){a.classList.add('nav-on');a.classList.remove('text-clay-500');}if(window.innerWidth<1024)toggleSB();if(p==='account')loadAcct();if(p==='report')loadReport();}
     function toggleSB(){document.getElementById('sidebar').classList.toggle('-translate-x-full');document.getElementById('sidebarOverlay').classList.toggle('hidden');}
     function toggleTkn(){tknShown=!tknShown;document.getElementById('tknDisp').classList.toggle('show',tknShown);document.getElementById('tknLbl').textContent=tknShown?'隐藏':'显示';}
     async function copyTkn(){const t=localStorage.getItem('ab-tk');if(!t)return;await navigator.clipboard.writeText(t);showDN('已复制 ✓');setTimeout(hideDN,2000);}
@@ -343,6 +393,80 @@
         input.value='';
     }
     function loadDash(){loadSum();loadTx();loadCharts();}
+
+    // Report
+    let yearlyBarInst=null,yearlyIncCatInst=null,yearlyExpCatInst=null;
+    const rptColors=['#f05540','#d4a055','#5e805e','#6b7280','#8b5cf6','#ec4899','#14b8a6','#f59e0b','#3b82f6','#6366f1'];
+
+    async function loadReport(){
+        const t=localStorage.getItem('ab-tk'),h=t?{'X-API-Token':t}:{};
+        const year=document.getElementById('reportYear').value;
+        try{
+            const r=await fetch(`/api/transactions/yearly-report?year=${year}`,{headers:h});
+            if(!r.ok)return;
+            const d=await r.json();
+
+            // Summary cards
+            document.getElementById('reportSummary').innerHTML=`
+                <div class="bg-sage-50 rounded-2xl border border-sage-100 p-4"><div class="text-[11px] font-bold text-clay-400 uppercase">总收入</div><div class="text-xl font-extrabold text-sage-600 mt-1">+¥${d.totalIncome}</div></div>
+                <div class="bg-coral-50 rounded-2xl border border-coral-100 p-4"><div class="text-[11px] font-bold text-clay-400 uppercase">总支出</div><div class="text-xl font-extrabold text-coral-500 mt-1">-¥${d.totalExpense}</div></div>
+                <div class="bg-sand-50 rounded-2xl border border-sand-200 p-4"><div class="text-[11px] font-bold text-clay-400 uppercase">结余</div><div class="text-xl font-extrabold text-sand-600 mt-1">¥${d.balance}</div></div>
+                <div class="bg-clay-50 rounded-2xl border border-clay-200 p-4"><div class="text-[11px] font-bold text-clay-400 uppercase">笔数</div><div class="text-xl font-extrabold text-clay-800 mt-1">${d.transactionCount}</div></div>
+                <div class="bg-clay-50 rounded-2xl border border-clay-200 p-4"><div class="text-[11px] font-bold text-clay-400 uppercase">月均支出</div><div class="text-xl font-extrabold text-clay-800 mt-1">¥${d.avgMonthlyExpense}</div></div>
+            `;
+
+            // Monthly bar chart
+            const labels=d.months.map(m=>m.month.slice(5));
+            const inc=d.months.map(m=>parseFloat(m.income)||0);
+            const exp=d.months.map(m=>parseFloat(m.expense)||0);
+            if(yearlyBarInst)yearlyBarInst.destroy();
+            yearlyBarInst=new Chart(document.getElementById('yearlyBarChart'),{
+                type:'bar',
+                data:{labels,datasets:[
+                    {label:'收入',data:inc,backgroundColor:'#5e805e',borderRadius:6,barPercentage:0.6},
+                    {label:'支出',data:exp,backgroundColor:'#f05540',borderRadius:6,barPercentage:0.6}
+                ]},
+                options:{responsive:true,maintainAspectRatio:false,interaction:{intersect:false,mode:'index'},
+                    plugins:{legend:{display:true,position:'top',labels:{usePointStyle:true,pointStyle:'circle',padding:14,font:{size:11,family:'Plus Jakarta Sans'}}},
+                        tooltip:{backgroundColor:'#4d443e',titleFont:{family:'Plus Jakarta Sans'},bodyFont:{family:'Plus Jakarta Sans'},padding:10,cornerRadius:12,callbacks:{label:ctx=>`${ctx.dataset.label}: ¥${ctx.parsed.y.toFixed(2)}`}}},
+                    scales:{x:{grid:{display:false},ticks:{font:{size:11,family:'Plus Jakarta Sans'},color:'#9a8c78'}}},
+                        y:{grid:{color:'#f0eeea'},ticks:{font:{size:11,family:'Plus Jakarta Sans'},color:'#9a8c78',callback:v=>'¥'+v}}}
+            });
+
+            // Category doughnut charts
+            renderCatChart('yearlyIncomeCat',yearlyIncCatInst,d.incomeByCategory,'income');
+            renderCatChart('yearlyExpenseCat',yearlyExpCatInst,d.expenseByCategory,'expense');
+
+            // Category detail lists
+            renderCatDetail('incomeDetail',d.incomeByCategory,d.totalIncome,'sage');
+            renderCatDetail('expenseDetail',d.expenseByCategory,d.totalExpense,'coral');
+
+        }catch(e){console.error('Report load failed:',e);}
+    }
+
+    function renderCatChart(canvasId,instance,categories,type){
+        if(!categories||!categories.length){
+            if(instance)instance.destroy();
+            return null;
+        }
+        const inst=new Chart(document.getElementById(canvasId),{
+            type:'doughnut',
+            data:{labels:categories.map(c=>c.category),datasets:[{data:categories.map(c=>parseFloat(c.amount)||0),backgroundColor:rptColors.slice(0,categories.length),borderWidth:0,hoverOffset:6}]},
+            options:{responsive:true,maintainAspectRatio:false,cutout:'65%',
+                plugins:{legend:{display:false},
+                    tooltip:{backgroundColor:'#4d443e',titleFont:{family:'Plus Jakarta Sans'},bodyFont:{family:'Plus Jakarta Sans'},padding:10,cornerRadius:12,callbacks:{label:ctx=>`${ctx.label}: ¥${ctx.parsed.toFixed(2)}`}}}}
+        });
+        if(type==='income')yearlyIncCatInst=inst;else yearlyExpCatInst=inst;
+    }
+
+    function renderCatDetail(containerId,categories,total,colorClass){
+        const el=document.getElementById(containerId);
+        if(!categories||!categories.length){el.innerHTML='<p class="text-xs text-clay-400">暂无数据</p>';return;}
+        el.innerHTML=categories.map(c=>{
+            const pct=parseFloat(total)===0?0:(parseFloat(c.amount)/parseFloat(total)*100);
+            return `<div class="flex items-center gap-3"><div class="flex-1 min-w-0"><div class="flex items-center justify-between mb-1"><span class="text-sm font-semibold text-clay-800">${esc(c.category)}</span><span class="text-sm font-bold text-clay-800">¥${c.amount}</span></div><div class="h-1.5 bg-clay-100 rounded-full overflow-hidden"><div class="h-full bg-${colorClass}-400 rounded-full" style="width:${Math.min(pct,100)}%"></div></div><div class="flex justify-between mt-0.5"><span class="text-[11px] text-clay-400">${c.count} 笔</span><span class="text-[11px] text-clay-400">${pct.toFixed(1)}%</span></div></div></div>`;
+        }).join('');
+    }
 
     async function exportCsv(){
         const t=localStorage.getItem('ab-tk');if(!t)return;
