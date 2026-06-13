@@ -83,6 +83,18 @@ public class AuthService {
         appUserRepository.save(user);
     }
 
+    public AppUser getProfile(String apiToken) {
+        return appUserRepository.findByApiToken(apiToken)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token"));
+    }
+
+    public void updateAvatar(String apiToken, String avatarData) {
+        AppUser user = appUserRepository.findByApiToken(apiToken)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token"));
+        user.setAvatarData(avatarData);
+        appUserRepository.save(user);
+    }
+
     public String regenerateToken(String apiToken) {
         AppUser user = appUserRepository.findByApiToken(apiToken)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid token"));

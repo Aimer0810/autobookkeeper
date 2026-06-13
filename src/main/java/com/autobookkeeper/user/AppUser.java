@@ -32,6 +32,9 @@ public class AppUser {
     @Column(nullable = false)
     private Instant createdAt;
 
+    @Column(columnDefinition = "TEXT")
+    private String avatarData;
+
     protected AppUser() {
     }
 
@@ -73,5 +76,13 @@ public class AppUser {
 
     public void setApiToken(String apiToken) {
         this.apiToken = apiToken;
+    }
+
+    public String getAvatarData() {
+        return avatarData;
+    }
+
+    public void setAvatarData(String avatarData) {
+        this.avatarData = avatarData;
     }
 }
